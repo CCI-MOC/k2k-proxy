@@ -68,3 +68,7 @@ satisfying the constraints defined by the user.
 ### Load Balancing
 The proxy can be paired with a *load monitoring* service and spread the
 resources across multiple service providers in case of high load in one.
+
+### Interpreting Qualified UUIDs
+The proxy could automatically parse UUIDs which are qualified with the desired
+service provider and learn the mapping.
