@@ -13,6 +13,7 @@
 #   under the License.
 
 import copy
+import os.path
 
 from keystoneauth1 import identity
 from keystoneauth1 import session
@@ -24,7 +25,7 @@ from mixmatch.session import request
 from mixmatch import config
 
 
-def learn_mapping(self, response):
+def learn_mapping(response):
     if response.status_code >= 200 < 300:
         # TODO: add mapping for resource
         pass
@@ -42,7 +43,9 @@ def proxy(path):
 
     # Use K2K to get a scoped token for the SP
     local_auth = identity.v3.Token(auth_url=config.KEYSTONE_URL,
-                                   token=user_token)
+                                   token=user_token,
+                                   project_name='admin',  # FIXME
+                                   project_domain_id='default')  # FIXME
 
     remote_auth = identity.v3.Keystone2Keystone(local_auth,
                                                 service_provider,
@@ -50,21 +53,20 @@ def proxy(path):
                                                 project_domain_id=project_domain)
 
     remote_session = session.Session(auth=remote_auth)
-    remote_client = client.Client(session=remote_session, interface='public')
-    remote_token = remote_client.get_token(remote_session)
 
     # Get the desired endpoint and recreate the path
-    endpoint = remote_client.service_catalog.url_for(service_type=endpoint_type)
-    remote_url = endpoint + path
+    auth_ref = remote_auth.get_auth_ref(remote_session)
+    endpoint = auth_ref.service_catalog.url_for(service_type=endpoint_type)
+    remote_url = '%s/%s' % (endpoint, path)
+    remote_token = auth_ref._auth_token
 
     # Prepare the headers
-    request_headers = copy.deepcopy(request.headers)
+    request_headers = dict()
     request_headers['X-AUTH-TOKEN'] = remote_token
 
-    del(request_headers['MM-SERVICE-PROVIDER'])
-    del(request_headers['MM-PROJECT-NAME'])
-    del(request_headers['MM-PROJECT-DOMAIN-ID'])
-    del(request_headers['MM-ENDPOINT-TYPE'])
+    print("Endpoint: %s" % endpoint)
+    print("Path: %s" % path)
+    print("Calling: %s" % remote_url)
 
     # Issue the request and return the response
     response = None
@@ -77,6 +79,7 @@ def proxy(path):
     elif request.method == 'DELETE':
         response = requests.delete(remote_url, headers=request_headers)
 
+    learn_mapping(response)
     return response.text
 
 if __name__ == "__main__":
