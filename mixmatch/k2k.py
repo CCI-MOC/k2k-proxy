@@ -48,12 +48,13 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
         remote_project = os.path.basename(endpoint)
         remote_token = auth_ref._auth_token
 
-        auth = model.RemoteAuth(local_token=user_token,
-                                service_provider=service_provider,
-                                remote_token=remote_token,
-                                remote_project=remote_project,
-                                endpoint_url=endpoint,
-                                )
+        auth = model.RemoteAuth(
+            local_token=user_token,
+            service_provider=service_provider,
+            remote_token=remote_token,
+            remote_project=remote_project,
+            endpoint_url=endpoint
+        )
 
         db.session.add(auth)
         db.session.commit()

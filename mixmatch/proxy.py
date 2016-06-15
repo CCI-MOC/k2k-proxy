@@ -16,9 +16,10 @@ import os
 
 import requests
 
-from mixmatch.session import app, extensions
+from mixmatch.session import app, extensions, db
 from mixmatch.session import request
 from mixmatch import k2k
+from mixmatch import model
 
 
 class Request:
@@ -29,6 +30,14 @@ class Request:
         self.version = self.path[0]
         self.local_project = self.path[1]
         self.action = self.path[2:]
+
+        self.resource = None
+        self.mapping = None
+        if len(self.action) > 1:
+            self.resource = self.action[1]
+            self.mapping = model.ResourceMapping.\
+                query.filter_by(resource_type=self.action[0],
+                                resource_id=self.resource).first()
 
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
@@ -43,6 +52,9 @@ class Request:
 
         if headers.has_key('MM-SERVICE-PROVIDER'):
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
+        elif self.resource and self.mapping:
+            print("Found mapping")
+            self.service_providers = [self.mapping.resource_sp]
         else:
             self.service_providers = ['dsvm-sp']
 
@@ -58,7 +70,19 @@ class Request:
             remote_url = os.path.join(auth.endpoint_url,
                                       os.path.join(*self.action))
 
-            return self._request(remote_url, headers)
+            # Send the request to the SP
+            text, status = self._request(remote_url, headers)
+
+            if self.resource and not self.mapping and status >= 200 < 300:
+                print("Adding mapping")
+                mapping = model.ResourceMapping(resource_sp=sp,
+                                                resource_id=self.resource,
+                                                resource_type=self.action[0])
+                db.session.add(mapping)
+                db.session.commit()
+
+            return text, status
+
 
     def _request(self, url, headers):
         response = None
@@ -70,7 +94,7 @@ class Request:
             response = requests.post(url, headers=headers, data=request.data)
         elif self.method == 'DELETE':
             response = requests.delete(url, headers=headers)
-        return response.text
+        return response.text, response.status_code
 
 
 @app.route('/', defaults={'path': ''})

@@ -46,5 +46,6 @@ class ResourceMapping(db.Model):
         self.resource_id = resource_id
         self.resource_sp = resource_sp
 
+
 # Create the tables
 db.create_all()
