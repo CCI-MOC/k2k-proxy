@@ -12,20 +12,12 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import flask
-import flask_sqlalchemy
+from mixmatch.ext import base
 
-from mixmatch import config
 
-from mixmatch.ext.base import BaseExtension
-from mixmatch.ext.volumes import VolumeAggregator
+class VolumeAggregator(base.BaseExtension):
+    def __init__(self):
+        self.aggregator = True
 
-app = flask.Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = config.DATABASE_URI
-request = flask.request
-
-extensions = dict()
-extensions['default'] = BaseExtension()
-extensions['volumes'] = VolumeAggregator()
-
-db = flask_sqlalchemy.SQLAlchemy(app)
+    def parse_response(self, response):
+        pass

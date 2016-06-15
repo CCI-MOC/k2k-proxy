@@ -12,109 +12,72 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import copy
 import os
 
-from keystoneauth1 import identity
-from keystoneauth1 import session
-from keystoneclient.v3 import client
 import requests
 
-from mixmatch import model
-from mixmatch.session import app, db
+from mixmatch.session import app, extensions
 from mixmatch.session import request
-from mixmatch import config
+from mixmatch import k2k
 
 
-def get_sp_auth_ref(service_provider,
-                    user_token,
-                    local_project_id=None):
-    # Use K2K to get a scoped token for the SP
-    # For some reason if I authenticate with the PROJECT_ID
-    # It doesn't like me
+class Request:
+    def __init__(self, method, path, headers):
+        self.method = method
 
-    auth = model.RemoteAuth.query.filter_by(local_token=user_token).first()
-    print("Auth: %s" % str(auth))
-    if auth is None:
-        print("Not cached")
-        local_auth = identity.v3.Token(auth_url=config.KEYSTONE_URL,
-                                       token=user_token,
-                                       project_name='admin',
-                                       project_domain_id='default')
+        self.path = path.split('/')
+        self.version = self.path[0]
+        self.local_project = self.path[1]
+        self.action = self.path[2:]
 
-        remote_auth = identity.v3.Keystone2Keystone(local_auth,
-                                                    service_provider,
-                                                    project_name='admin',  # FIXME
-                                                    project_domain_id='default')  # FIXME
+        self.headers = headers
+        self.local_token = headers['X-AUTH-TOKEN']
+        self.project_name = headers['MM-PROJECT-NAME']
+        self.project_domain_id = headers['MM-PROJECT-DOMAIN-ID']
+        self.endpoint_type = headers['MM-ENDPOINT-TYPE']
 
-        remote_session = session.Session(auth=remote_auth)
-        auth_ref = remote_auth.get_auth_ref(remote_session)
+        extension_uri = os.path.join(*self.action)
+        self.extension = extensions['default']
+        if extensions.has_key(extension_uri):
+            self.extension = extensions[extension_uri]
 
-        endpoint = auth_ref.service_catalog.url_for(service_type='volume')
-        remote_project = os.path.basename(endpoint)
-        remote_token = auth_ref._auth_token
+        if headers.has_key('MM-SERVICE-PROVIDER'):
+            self.service_providers = [headers['MM-SERVICE-PROVIDER']]
+        else:
+            self.service_providers = ['dsvm-sp']
 
-        auth = model.RemoteAuth(local_token=user_token,
-                                service_provider=service_provider,
-                                remote_token=remote_token,
-                                remote_project=remote_project,
-                                endpoint_url=endpoint,
-                                )
+    def forward(self):
+        for sp in self.service_providers:
+            # Authenticate with the remote SP
+            auth = k2k.get_sp_auth(sp, self.local_token)
 
-        db.session.add(auth)
-        db.session.commit()
+            # Prepare header
+            headers = dict()
+            headers['X-AUTH-TOKEN'] = auth.remote_token
 
-    return auth
+            remote_url = os.path.join(auth.endpoint_url,
+                                      os.path.join(*self.action))
 
+            return self._request(remote_url, headers)
 
-def learn_mapping(response):
-    if response.status_code >= 200 < 300:
-        # TODO: add mapping for resource
-        pass
+    def _request(self, url, headers):
+        response = None
+        if self.method == 'GET':
+            response = requests.get(url, headers=headers, data=request.data)
+        elif self.method == 'PUT':
+            response = requests.put(url, headers=headers, data=request.data)
+        elif self.method == 'POST':
+            response = requests.post(url, headers=headers, data=request.data)
+        elif self.method == 'DELETE':
+            response = requests.delete(url, headers=headers)
+        return response.text
 
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def proxy(path):
-    # Get the values from the header
-    service_provider = request.headers['MM-SERVICE-PROVIDER']
-    user_token = request.headers['X-AUTH-TOKEN']
-    project_name = request.headers['MM-PROJECT-NAME']
-    project_domain = request.headers['MM-PROJECT-DOMAIN-ID']
-    endpoint_type = request.headers['MM-ENDPOINT-TYPE']
-
-    path_components = path.split('/')
-    version = path_components[0]
-    local_project = path_components[1]
-    action = path_components[2]
-
-    print("Path Components: %s" % path_components)
-    print("Local project: %s" % local_project)
-    print("Action: %s" % action)
-
-    # Get the desired endpoint and recreate the path
-    auth = get_sp_auth_ref(service_provider, user_token)
-
-    # Prepare the headers
-    request_headers = dict()
-    request_headers['X-AUTH-TOKEN'] = auth.remote_token
-
-    remote_url = os.path.join(auth.endpoint_url, action)
-    print('Calling: %s' % remote_url)
-
-    # Issue the request and return the response
-    response = None
-    if request.method == 'GET':
-        response = requests.get(remote_url, headers=request_headers, data=request.data)
-    elif request.method == 'PUT':
-        response = requests.put(remote_url, headers=request_headers, data=request.data)
-    elif request.method == 'POST':
-        response = requests.post(remote_url, headers=request_headers, data=request.data)
-    elif request.method == 'DELETE':
-        response = requests.delete(remote_url, headers=request_headers)
-
-    learn_mapping(response)
-    return response.text
+    k2k_request = Request(request.method, path, request.headers)
+    return k2k_request.forward()
 
 if __name__ == "__main__":
     app.run(port=5001)

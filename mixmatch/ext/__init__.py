@@ -11,21 +11,3 @@
 #   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #   License for the specific language governing permissions and limitations
 #   under the License.
-
-import flask
-import flask_sqlalchemy
-
-from mixmatch import config
-
-from mixmatch.ext.base import BaseExtension
-from mixmatch.ext.volumes import VolumeAggregator
-
-app = flask.Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = config.DATABASE_URI
-request = flask.request
-
-extensions = dict()
-extensions['default'] = BaseExtension()
-extensions['volumes'] = VolumeAggregator()
-
-db = flask_sqlalchemy.SQLAlchemy(app)
