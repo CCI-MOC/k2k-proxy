@@ -47,5 +47,10 @@ class ResourceMapping(db.Model):
         self.resource_sp = resource_sp
 
 
+def insert(entity):
+    db.session.add(entity)
+    db.session.commit()
+
+
 # Create the tables
 db.create_all()

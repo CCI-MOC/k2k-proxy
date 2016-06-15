@@ -17,7 +17,6 @@ import os
 from keystoneauth1 import identity
 from keystoneauth1 import session
 
-from mixmatch.session import db
 from mixmatch import config
 from mixmatch import model
 
@@ -56,7 +55,6 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
             endpoint_url=endpoint
         )
 
-        db.session.add(auth)
-        db.session.commit()
+        model.insert(auth)
 
     return auth

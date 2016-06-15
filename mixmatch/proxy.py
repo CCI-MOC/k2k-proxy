@@ -16,7 +16,7 @@ import os
 
 import requests
 
-from mixmatch.session import app, extensions, db
+from mixmatch.session import app, extensions
 from mixmatch.session import request
 from mixmatch import k2k
 from mixmatch import model
@@ -78,11 +78,8 @@ class Request:
                 mapping = model.ResourceMapping(resource_sp=sp,
                                                 resource_id=self.resource,
                                                 resource_type=self.action[0])
-                db.session.add(mapping)
-                db.session.commit()
-
+                model.insert(mapping)
             return text, status
-
 
     def _request(self, url, headers):
         response = None
