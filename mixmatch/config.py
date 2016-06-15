@@ -12,7 +12,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-DATABASE_URI = 'sqlite:////tmp/test.db'
+DATABASE_URI = 'sqlite:////home/ubuntu/k2k-proxy/proxy.db'
 
 KEYSTONE_URL = 'http://localhost:35357/v3'
 KEYSTONE_ECP_URL = ''

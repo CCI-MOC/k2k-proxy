@@ -15,17 +15,24 @@
 from mixmatch.session import db
 
 
-class TokenCache(db.Model):
+class RemoteAuth(db.Model):
     local_token = db.Column(db.String(255), primary_key=True)
-    remote_sp = db.Column(db.String(255), nullable=False)
+    service_provider = db.Column(db.String(255), nullable=False)
     remote_token = db.Column(db.String(255), nullable=False)
     remote_project = db.Column(db.String(255), nullable=False)
+    endpoint_url = db.Column(db.String(255), nullable=False)
 
-    def __init__(self, local_token, remote_sp, remote_token, remote_project):
+    def __init__(self,
+                 local_token,
+                 service_provider,
+                 remote_token,
+                 remote_project,
+                 endpoint_url):
         self.local_token = local_token
-        self.remote_sp = remote_sp
+        self.service_provider = service_provider
         self.remote_token = remote_token
         self.remote_project = remote_project
+        self.endpoint_url = endpoint_url
 
 
 class ResourceMapping(db.Model):
@@ -38,3 +45,6 @@ class ResourceMapping(db.Model):
         self.resource_type = resource_type
         self.resource_id = resource_id
         self.resource_sp = resource_sp
+
+# Create the tables
+db.create_all()

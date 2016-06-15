@@ -13,16 +13,58 @@
 #   under the License.
 
 import copy
-import os.path
+import os
 
 from keystoneauth1 import identity
 from keystoneauth1 import session
 from keystoneclient.v3 import client
 import requests
 
-from mixmatch.session import app
+from mixmatch import model
+from mixmatch.session import app, db
 from mixmatch.session import request
 from mixmatch import config
+
+
+def get_sp_auth_ref(service_provider,
+                    user_token,
+                    local_project_id=None):
+    # Use K2K to get a scoped token for the SP
+    # For some reason if I authenticate with the PROJECT_ID
+    # It doesn't like me
+
+    auth = model.RemoteAuth.query.filter_by(local_token=user_token).first()
+    print("Auth: %s" % str(auth))
+    if auth is None:
+        print("Not cached")
+        local_auth = identity.v3.Token(auth_url=config.KEYSTONE_URL,
+                                       token=user_token,
+                                       project_name='admin',
+                                       project_domain_id='default')
+
+        remote_auth = identity.v3.Keystone2Keystone(local_auth,
+                                                    service_provider,
+                                                    project_name='admin',  # FIXME
+                                                    project_domain_id='default')  # FIXME
+
+        remote_session = session.Session(auth=remote_auth)
+        auth_ref = remote_auth.get_auth_ref(remote_session)
+
+        endpoint = auth_ref.service_catalog.url_for(service_type='volume')
+        remote_project = os.path.basename(endpoint)
+        remote_token = auth_ref._auth_token
+
+        auth = model.RemoteAuth(local_token=user_token,
+                                service_provider=service_provider,
+                                remote_token=remote_token,
+                                remote_project=remote_project,
+                                endpoint_url=endpoint,
+                                )
+
+        db.session.add(auth)
+        db.session.commit()
+
+    return auth
 
 
 def learn_mapping(response):
@@ -41,32 +83,24 @@ def proxy(path):
     project_domain = request.headers['MM-PROJECT-DOMAIN-ID']
     endpoint_type = request.headers['MM-ENDPOINT-TYPE']
 
-    # Use K2K to get a scoped token for the SP
-    local_auth = identity.v3.Token(auth_url=config.KEYSTONE_URL,
-                                   token=user_token,
-                                   project_name='admin',  # FIXME
-                                   project_domain_id='default')  # FIXME
+    path_components = path.split('/')
+    version = path_components[0]
+    local_project = path_components[1]
+    action = path_components[2]
 
-    remote_auth = identity.v3.Keystone2Keystone(local_auth,
-                                                service_provider,
-                                                project_name=project_name,
-                                                project_domain_id=project_domain)
-
-    remote_session = session.Session(auth=remote_auth)
+    print("Path Components: %s" % path_components)
+    print("Local project: %s" % local_project)
+    print("Action: %s" % action)
 
     # Get the desired endpoint and recreate the path
-    auth_ref = remote_auth.get_auth_ref(remote_session)
-    endpoint = auth_ref.service_catalog.url_for(service_type=endpoint_type)
-    remote_url = '%s/%s' % (endpoint, path)
-    remote_token = auth_ref._auth_token
+    auth = get_sp_auth_ref(service_provider, user_token)
 
     # Prepare the headers
     request_headers = dict()
-    request_headers['X-AUTH-TOKEN'] = remote_token
+    request_headers['X-AUTH-TOKEN'] = auth.remote_token
 
-    print("Endpoint: %s" % endpoint)
-    print("Path: %s" % path)
-    print("Calling: %s" % remote_url)
+    remote_url = os.path.join(auth.endpoint_url, action)
+    print('Calling: %s' % remote_url)
 
     # Issue the request and return the response
     response = None
