@@ -44,7 +44,7 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
         remote_session = session.Session(auth=remote_auth)
         auth_ref = remote_auth.get_auth_ref(remote_session)
 
-        endpoint = auth_ref.service_catalog.url_for(service_type='volume')
+        endpoint = auth_ref.service_catalog.url_for(service_type='volumev2')
         remote_project = os.path.basename(endpoint)
         remote_token = auth_ref._auth_token
 

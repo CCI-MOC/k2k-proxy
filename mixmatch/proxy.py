@@ -45,6 +45,7 @@ class Request:
 
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
+        print(self.local_token)
         #self.project_name = headers['MM-PROJECT-NAME']
         #self.project_domain_id = headers['MM-PROJECT-DOMAIN-ID']
         #self.endpoint_type = headers['MM-ENDPOINT-TYPE']
@@ -64,7 +65,8 @@ class Request:
 
     def forward(self):
         responses = dict()
-        global text, status
+        text = None
+        status = None
         for sp in self.service_providers:
             print ("Querying: %s" % sp)
             # Prepare header
@@ -83,12 +85,15 @@ class Request:
 
             # Send the request to the SP
             text, status = self._request(remote_url, headers)
+            print("Path: %s" % self.path)
+            print(self.action)
             print("Remote URL: %s" % remote_url)
             print(status)
+            print(request.data)
 
             responses[sp] = text
 
-            if (status == 200 or status == 204) and self.aggregate == False:
+            if status >= 200 and status < 300 and not self.aggregate:
                 if self.resource and not self.mapping:
                     print("Adding mapping")
                     mapping = model.ResourceMapping(resource_sp=sp,
@@ -114,13 +119,15 @@ class Request:
             response = requests.put(url, headers=headers, data=request.data)
         elif self.method == 'POST':
             response = requests.post(url, headers=headers, data=request.data)
+            print "POST RESPONSE: " + response.text + " " + str(response.status_code)
         elif self.method == 'DELETE':
             response = requests.delete(url, headers=headers)
+        print(self.method)
         return response.text, response.status_code
 
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def proxy(path):
     k2k_request = Request(request.method, path, request.headers)
     return k2k_request.forward()
