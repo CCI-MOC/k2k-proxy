@@ -41,9 +41,9 @@ class Request:
 
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
-        self.project_name = headers['MM-PROJECT-NAME']
-        self.project_domain_id = headers['MM-PROJECT-DOMAIN-ID']
-        self.endpoint_type = headers['MM-ENDPOINT-TYPE']
+        #self.project_name = headers['MM-PROJECT-NAME']
+        #self.project_domain_id = headers['MM-PROJECT-DOMAIN-ID']
+        #self.endpoint_type = headers['MM-ENDPOINT-TYPE']
 
         extension_uri = os.path.join(*self.action)
         self.extension = extensions['default']
@@ -56,10 +56,12 @@ class Request:
             print("Found mapping")
             self.service_providers = [self.mapping.resource_sp]
         else:
-            self.service_providers = ['dsvm-sp']
+            self.service_providers = ['dsvm-sp', 'dsvm-sp2', 'dsvm-sp3']
 
     def forward(self):
+        global text, status
         for sp in self.service_providers:
+            print ("Querying: %s" % sp)
             # Authenticate with the remote SP
             auth = k2k.get_sp_auth(sp, self.local_token)
 
@@ -72,14 +74,18 @@ class Request:
 
             # Send the request to the SP
             text, status = self._request(remote_url, headers)
+            print("Remote URL: %s" % remote_url)
+            print(status)
 
-            if self.resource and not self.mapping and status >= 200 < 300:
-                print("Adding mapping")
-                mapping = model.ResourceMapping(resource_sp=sp,
-                                                resource_id=self.resource,
-                                                resource_type=self.action[0])
-                model.insert(mapping)
-            return text, status
+            if status == 200:
+                if self.resource and not self.mapping:
+                    print("Adding mapping")
+                    mapping = model.ResourceMapping(resource_sp=sp,
+                                                    resource_id=self.resource,
+                                                    resource_type=self.action[0])
+                    model.insert(mapping)
+                break
+        return text, status
 
     def _request(self, url, headers):
         response = None

@@ -16,7 +16,8 @@ from mixmatch.session import db
 
 
 class RemoteAuth(db.Model):
-    local_token = db.Column(db.String(255), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    local_token = db.Column(db.String(255), nullable=False)
     service_provider = db.Column(db.String(255), nullable=False)
     remote_token = db.Column(db.String(255), nullable=False)
     remote_project = db.Column(db.String(255), nullable=False)

@@ -26,7 +26,8 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
     # For some reason if I authenticate with the PROJECT_ID
     # It doesn't like me
 
-    auth = model.RemoteAuth.query.filter_by(local_token=user_token).first()
+    auth = model.RemoteAuth.query.filter_by(local_token=user_token,
+                                            service_provider=service_provider).first()
     print("Auth: %s" % str(auth))
     if auth is None:
         print("Not cached")
