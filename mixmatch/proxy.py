@@ -12,6 +12,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import json
 import os
 
 import requests
@@ -33,11 +34,14 @@ class Request:
 
         self.resource = None
         self.mapping = None
-        if len(self.action) > 1:
+        if len(self.action) > 1 and self.action[1] != "detail":
             self.resource = self.action[1]
             self.mapping = model.ResourceMapping.\
                 query.filter_by(resource_type=self.action[0],
                                 resource_id=self.resource).first()
+            self.aggregate = False
+        else:
+            self.aggregate = True
 
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
@@ -56,28 +60,35 @@ class Request:
             print("Found mapping")
             self.service_providers = [self.mapping.resource_sp]
         else:
-            self.service_providers = ['dsvm-sp', 'dsvm-sp2', 'dsvm-sp3']
+            self.service_providers = ['default', 'dsvm-sp', 'dsvm-sp2', 'dsvm-sp3']
 
     def forward(self):
+        responses = dict()
         global text, status
         for sp in self.service_providers:
             print ("Querying: %s" % sp)
-            # Authenticate with the remote SP
-            auth = k2k.get_sp_auth(sp, self.local_token)
-
             # Prepare header
             headers = dict()
-            headers['X-AUTH-TOKEN'] = auth.remote_token
+            if sp is 'default':
+                headers['X-AUTH-TOKEN'] = self.local_token
+                remote_url = "http://localhost:8776/%s/%s/%s" % (self.version,
+                                                                 self.local_project,
+                                                                 os.path.join(*self.action))
+            else:
+                auth = k2k.get_sp_auth(sp, self.local_token)
+                headers['X-AUTH-TOKEN'] = auth.remote_token
+                remote_url = os.path.join(auth.endpoint_url,
+                                          os.path.join(*self.action))
 
-            remote_url = os.path.join(auth.endpoint_url,
-                                      os.path.join(*self.action))
 
             # Send the request to the SP
             text, status = self._request(remote_url, headers)
             print("Remote URL: %s" % remote_url)
             print(status)
 
-            if status == 200:
+            responses[sp] = text
+
+            if (status == 200 or status == 204) and self.aggregate == False:
                 if self.resource and not self.mapping:
                     print("Adding mapping")
                     mapping = model.ResourceMapping(resource_sp=sp,
@@ -85,6 +96,14 @@ class Request:
                                                     resource_type=self.action[0])
                     model.insert(mapping)
                 break
+
+        if self.aggregate:
+            if extensions.has_key(self.action[0]):
+                text = extensions[self.action[0]].aggregate(responses)
+            else:
+                text = extensions['default'].aggregate(responses)
+            status = 200
+
         return text, status
 
     def _request(self, url, headers):

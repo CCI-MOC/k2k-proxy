@@ -17,5 +17,6 @@ class BaseExtension:
     def __init__(self):
         self.aggregator = False
 
-    def parse_response(self, response):
-        return response
+    def aggregate(self, response):
+        for i, j in response.iteritems():
+            return j

@@ -12,6 +12,8 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import json
+
 from mixmatch.ext import base
 
 
@@ -19,5 +21,11 @@ class VolumeAggregator(base.BaseExtension):
     def __init__(self):
         self.aggregator = True
 
-    def parse_response(self, response):
-        pass
+    def aggregate(self, response):
+        volume_list = []
+        for sp, sp_response in response.iteritems():
+            volumes = json.loads(sp_response)
+            if type(volumes) == dict:
+                volume_list += volumes["volumes"]
+
+        return json.dumps({ "volumes": volume_list})
