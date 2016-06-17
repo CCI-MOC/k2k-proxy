@@ -1,9 +1,11 @@
-# WIP: K2K-Aware Proxy for OpenStack
+WIP: K2K Proxy for OpenStack
+============================
 
 Service that will forward the request to a remote service provider using
 Keystone 2 Keystone (K2K) Federation.
 
-## Examples
+Examples
+--------
 Assume the user wants to query a remote Cinder which is federated via
 K2K.
 
@@ -26,8 +28,8 @@ it received the the request and with the same body and headers, except
 the above mentioned four headers.
 8. Returns the response as-is to the user.
 
-## Possible Future Enhancements
-### Dynamic Learning
+Dynamic Learning
+----------------
 REST APIs are very predictable, so we can assume that a GET or PUT request to
 `/servers/123` destined for service provider X returns 200, then the resource
 of type **server** with id **123** exists on service provider **X**. Thus we
@@ -47,7 +49,8 @@ through the K2K proxy, we would not even have to specify the service provider
 where the volume is stored. Therefore making Resource Federation entirely
 automatic to the user and services using them.
 
-### Resource Aggregation
+Resource Aggregation
+--------------------
 The proxy would also allow us to issue the same API call to several service
 and aggregate the results across the different service providers, providing
 the user with a consistent list of all their resources spread across the
@@ -58,17 +61,20 @@ Combining this with the enhancement above, the user can just use the UUID
 as returned from the list call, knowing that the request will go to the
 correct service provider.
 
-### Service Discovery
+Service Discovery
+-----------------
 The proxy can be paired with a *service discovery* service that publishes the
 SLAs and costs of the various service providers. An optimization algorithm
 could take a specification (ex. heat template) and use the resources from the
 various service providers automatically to optimize and objective function
 satisfying the constraints defined by the user.
 
-### Load Balancing
+Load Balancing
+--------------
 The proxy can be paired with a *load monitoring* service and spread the
 resources across multiple service providers in case of high load in one.
 
-### Interpreting Qualified UUIDs
+Interpreting Qualified UUIDs
+----------------------------
 The proxy could automatically parse UUIDs which are qualified with the desired
 service provider and learn the mapping.

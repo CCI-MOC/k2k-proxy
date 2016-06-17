@@ -1,4 +1,5 @@
-# Proxy Architecture
+Proxy Architecture
+==================
 
 The proxy is designed to substitute an OpenStack endpoint in the service
 catalog. Calls received by the proxy will be forwarded to all or select
@@ -15,7 +16,8 @@ resource_endpoint_url)
 
 3. Extensions
 
-## Token Mappings
+Token Mappings
+--------------
 The proxy receives a call with a specific token scoped to a project. When it
 needs to make a call to a service provider endpoint, it will check in the
 database if it already contains a mapping matching this token, project,
@@ -25,14 +27,16 @@ and get a token and store the newly generated mapping.
 This can be thought of as a token cache, and in it most basic form it will do
 just that.
 
-## Resource Mappings
+Resource Mappings
+-----------------
 REST APIs are very predictable, so we can assume that if the proxy receives a
 request to `<project_id>/volume/12345` then the user is requesting a resource
 of type `volume` with id `12345`. If the proxy doesn't have that specific
 mapping, it can flood all the service providers until it receives a 200,
 store the newly generated mapping and return the request to the user.
 
-## Extensions
+Extensions
+----------
 Extensions can be built to register themselves for a specific path. These
 extensions can manipulate the request sent to the remote endpoint and also the
 response received by the endpoint. Additionally, they can configure where the
@@ -44,9 +48,11 @@ to query all service providers. The responses from all the service providers
 are parsed by the extension and aggregated. Additionally, the extensions
 can also be built to learn the mappings of all the returned responses.
 
-# Use Cases Enabled
+Use Cases Enabled
+-----------------
 
-## Token Injection
+Token Injection
+~~~~~~~~~~~~~~~
 Assume the following architecture: IDP is the Keystone 2 Keystone identity
 provider, SP1 is a compute service provider, and SP2 is a block storage
 service provider. Alice has a token for the IDP, an instance with id **VM1**
@@ -57,17 +63,17 @@ Cinder respectively.
 Use case: Alice wants to attach BS1 to VM1.
 
 Alice issues the command to Nova, either via the client or dashboard. The
-request is sent as:
+request is sent as: ::
 
-```
-PUT /v2.1/​<project_id>​/servers/​VM1/os-volume_attachments
-{
-    "volumeAttachment": {
-        "volumeId": "BS1",
-        "device": "/dev/vdd"
+
+    PUT /v2.1/​<project_id>​/servers/​VM1/os-volume_attachments
+    {
+        "volumeAttachment": {
+            "volumeId": "BS1",
+            "device": "/dev/vdd"
+        }
     }
-}
-```
+
 
 The proxy knows (or learns) the mapping `server, VM1, SP1`.
 
@@ -76,17 +82,18 @@ parses the body of the request for the `volumeId` attribute and finds
 the mapping `volume, BS1, SP2` (either knows it or learns it). The extension
 doesn't change the request body.
 
-Since the proxy already queried SP1 and SP2, it's token mapping table now has:
+Since the proxy already queried SP1 and SP2, it's token mapping table now has: ::
 
-| LOCAL_TOKEN | LOCAL_PROJECT_ID |  SP | REMOTE_TOKEN | REMOTE_PROJECT_ID |
-|-------------|------------------|-----|--------------|-------------------|
-| alice_token | alice_project_id | SP1 | SP1_token    | SP1_project_id    |
-| alice_token | alice_project_id | SP2 | SP2_token    | SP2_project_id    |
+    | LOCAL_TOKEN | LOCAL_PROJECT_ID |  SP | REMOTE_TOKEN | REMOTE_PROJECT_ID |
+    |-------------|------------------|-----|--------------|-------------------|
+    | alice_token | alice_project_id | SP1 | SP1_token    | SP1_project_id    |
+    | alice_token | alice_project_id | SP2 | SP2_token    | SP2_project_id    |
+
 
 The proxy in the IDP injects the following mappings in the proxy in SP1:
 
-* Token Mapping: SP1_token, SP1_project_id -> SP2 -> SP2_token, SP2_project_id
-* Resource Mapping: volume, BS1, SP2, SP2_cinder_url
+* Token Mapping: `SP1_token, SP1_project_id -> SP2 -> SP2_token, SP2_project_id`
+* Resource Mapping: `volume, BS1, SP2, SP2_cinder_url`
 
 The proxy in IDP finally forwards the call to the SP2 Nova.
 
@@ -96,7 +103,8 @@ the correct endpoint and with the correct token.
 
 Nova is happy, Cinder is happy, Alice is happy.
 
-## Volume create on boot
+Volume create on boot
+~~~~~~~~~~~~~~~~~~~~~
 A particularly tricky case is creating a volume and attaching it on boot.
 The previous use case was enabled without any changes to the Nova API or any
 of the clients, because the proxy is automatically able to find where the
