@@ -20,6 +20,8 @@ from keystoneauth1 import session
 from mixmatch import config
 from mixmatch import model
 
+CONF = config.CONF
+
 
 def get_sp_auth(service_provider, user_token, local_project_id=None):
     # Use K2K to get a scoped token for the SP
@@ -31,7 +33,7 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
     print("Auth: %s" % str(auth))
     if auth is None:
         print("Not cached")
-        local_auth = identity.v3.Token(auth_url=config.KEYSTONE_URL,
+        local_auth = identity.v3.Token(auth_url=CONF.keystone.auth_url,
                                        token=user_token,
                                        project_name='admin',
                                        project_domain_id='default')

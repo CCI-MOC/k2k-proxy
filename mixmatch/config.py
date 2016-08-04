@@ -12,12 +12,65 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-DATABASE_URI = 'sqlite:////home/ubuntu/k2k-proxy/proxy.db'
+from oslo_config import cfg
 
-KEYSTONE_URL = 'http://localhost:35357/v3'
-KEYSTONE_ECP_URL = ''
-PROXY_USERNAME = 'admin'
-PROXY_USER_DOMAIN_ID='default'
-PROXY_PASSWORD = 'nomoresecrete'
-PROXY_PROJECT_NAME = 'admin'
-PROXY_PROJECT_DOMAIN_ID = 'default'
+CONF = cfg.CONF
+
+# Proxy
+proxy_group = cfg.OptGroup(name='proxy',
+                           title='Proxy Config Group')
+
+proxy_opts = [
+    cfg.StrOpt('database_uri',
+               default='sqlite://',
+               help='Database URI')
+]
+
+# Keystone
+keystone_group = cfg.OptGroup(name='keystone',
+                              title='Keystone Config Group')
+
+keystone_opts = [
+    cfg.StrOpt('auth_url',
+               default='http://localhost:35357/v3',
+               help='Keystone AUTH URL'),
+
+    cfg.StrOpt('username',
+               default='admin',
+               help='Proxy username'),
+
+    cfg.StrOpt('user_domain_id',
+               default='default',
+               help='Proxy user domain id'),
+
+    cfg.StrOpt('password',
+               default='nomoresecrete',
+               help='Proxy user password'),
+
+    cfg.StrOpt('project_name',
+               default='admin',
+               help='Proxy project name'),
+
+    cfg.StrOpt('project_domain_id',
+               default='default',
+               help='Proxy project domain id')
+]
+
+
+CONF.register_group(proxy_group)
+CONF.register_opts(proxy_opts, proxy_group)
+
+CONF.register_group(keystone_group)
+CONF.register_opts(keystone_opts, keystone_group)
+
+try:
+    CONF(default_config_files=['k2k-proxy.conf'])
+except cfg.ConfigFilesNotFoundError:
+    try:
+        CONF(default_config_files=['etc/k2k-proxy.conf'])
+    except cfg.ConfigFilesNotFoundError:
+        try:
+            CONF(default_config_files=['/etc/k2k-proxy.conf'])
+        except cfg.ConfigFilesNotFoundError:
+            # Just use the defaults
+            pass

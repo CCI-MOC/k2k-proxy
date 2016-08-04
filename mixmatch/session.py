@@ -20,8 +20,10 @@ from mixmatch import config
 from mixmatch.ext.base import BaseExtension
 from mixmatch.ext.volumes import VolumeAggregator
 
+CONF = config.CONF
+
 app = flask.Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = config.DATABASE_URI
+app.config['SQLALCHEMY_DATABASE_URI'] = CONF.proxy.database_uri
 request = flask.request
 
 extensions = dict()

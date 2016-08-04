@@ -46,9 +46,6 @@ class Request:
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
         print(self.local_token)
-        #self.project_name = headers['MM-PROJECT-NAME']
-        #self.project_domain_id = headers['MM-PROJECT-DOMAIN-ID']
-        #self.endpoint_type = headers['MM-ENDPOINT-TYPE']
 
         extension_uri = os.path.join(*self.action)
         self.extension = extensions['default']
@@ -132,5 +129,9 @@ def proxy(path):
     k2k_request = Request(request.method, path, request.headers)
     return k2k_request.forward()
 
-if __name__ == "__main__":
+
+def main():
     app.run(port=5001)
+
+if __name__ == "__main__":
+    main()
