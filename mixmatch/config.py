@@ -12,6 +12,8 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from os import path
+
 from oslo_config import cfg
 
 CONF = cfg.CONF
@@ -63,14 +65,9 @@ CONF.register_opts(proxy_opts, proxy_group)
 CONF.register_group(keystone_group)
 CONF.register_opts(keystone_opts, keystone_group)
 
-try:
-    CONF(default_config_files=['k2k-proxy.conf'])
-except cfg.ConfigFilesNotFoundError:
-    try:
-        CONF(default_config_files=['etc/k2k-proxy.conf'])
-    except cfg.ConfigFilesNotFoundError:
-        try:
-            CONF(default_config_files=['/etc/k2k-proxy.conf'])
-        except cfg.ConfigFilesNotFoundError:
-            # Just use the defaults
-            pass
+conf_files = [f for f in ['k2k-proxy.conf',
+                          'etc/k2k-proxy.conf',
+                          '/etc/k2k-proxy.conf'] if path.isfile(f)]
+
+if conf_files is not []:
+    CONF(default_config_files=conf_files)
