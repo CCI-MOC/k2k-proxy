@@ -12,16 +12,25 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from mixmatch.session import db
+import sqlalchemy as sql
+
+from mixmatch import config
+
+from oslo_db.sqlalchemy import enginefacade
+from oslo_db.sqlalchemy import models
 
 
-class RemoteAuth(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    local_token = db.Column(db.String(255), nullable=False)
-    service_provider = db.Column(db.String(255), nullable=False)
-    remote_token = db.Column(db.String(255), nullable=False)
-    remote_project = db.Column(db.String(255), nullable=False)
-    endpoint_url = db.Column(db.String(255), nullable=False)
+CONF = config.CONF
+
+
+class RemoteAuth(models.ModelBase):
+    __tablename__ = 'remote_auth'
+    id = sql.Column(sql.Integer, primary_key=True)
+    local_token = sql.Column(sql.String(255), nullable=False)
+    service_provider = sql.Column(sql.String(255), nullable=False)
+    remote_token = sql.Column(sql.String(255), nullable=False)
+    remote_project = sql.Column(sql.String(255), nullable=False)
+    endpoint_url = sql.Column(sql.String(255), nullable=False)
 
     def __init__(self,
                  local_token,
@@ -36,11 +45,12 @@ class RemoteAuth(db.Model):
         self.endpoint_url = endpoint_url
 
 
-class ResourceMapping(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    resource_type = db.Column(db.String(60), nullable=False)
-    resource_id = db.Column(db.String(255), nullable=False)
-    resource_sp = db.Column(db.String(255), nullable=False)
+class ResourceMapping(models.ModelBase):
+    __tablename__ = 'resource_mapping'
+    id = sql.Column(sql.Integer, primary_key=True)
+    resource_type = sql.Column(sql.String(60), nullable=False)
+    resource_id = sql.Column(sql.String(255), nullable=False)
+    resource_sp = sql.Column(sql.String(255), nullable=False)
 
     def __init__(self, resource_type, resource_id, resource_sp):
         self.resource_type = resource_type
@@ -48,10 +58,18 @@ class ResourceMapping(db.Model):
         self.resource_sp = resource_sp
 
 
+class TestMe(models.ModelBase, models.TimestampMixin):
+    __tablename__ = 'test_me'
+    metadata = None
+    id = sql.Column(sql.Integer, primary_key=True)
+    label = sql.Column(sql.String(255))
+
+
 def insert(entity):
-    db.session.add(entity)
-    db.session.commit()
+    context = enginefacade.transaction_context()
+    with enginefacade.writer.using(context) as session:
+        session.add(entity)
 
 
 # Create the tables
-db.create_all()
+# sql.create_all()

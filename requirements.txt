@@ -1,6 +1,7 @@
 flask
-flask-sqlalchemy
+sqlalchemy
 keystoneauth
 oslo.config
+oslo.db
 python-keystoneclient
 requests

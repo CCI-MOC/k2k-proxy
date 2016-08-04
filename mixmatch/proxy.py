@@ -131,6 +131,9 @@ def proxy(path):
 
 
 def main():
+    test = model.TestMe()
+    model.insert(test)
+    model.read()
     app.run(port=5001)
 
 if __name__ == "__main__":
