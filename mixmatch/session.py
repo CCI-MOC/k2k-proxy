@@ -13,7 +13,6 @@
 #   under the License.
 
 import flask
-import flask_sqlalchemy
 
 from mixmatch import config
 
@@ -23,11 +22,8 @@ from mixmatch.ext.volumes import VolumeAggregator
 CONF = config.CONF
 
 app = flask.Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = CONF.proxy.database_uri
 request = flask.request
 
 extensions = dict()
 extensions['default'] = BaseExtension()
 extensions['volumes'] = VolumeAggregator()
-
-db = flask_sqlalchemy.SQLAlchemy(app)
