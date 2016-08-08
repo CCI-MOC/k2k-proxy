@@ -15,6 +15,9 @@
 from os import path
 
 from oslo_config import cfg
+from oslo_log import log
+
+LOG = log.getLogger('root')
 
 CONF = cfg.CONF
 
@@ -65,9 +68,13 @@ CONF.register_opts(proxy_opts, proxy_group)
 CONF.register_group(keystone_group)
 CONF.register_opts(keystone_opts, keystone_group)
 
+log.register_options(CONF)
+
 conf_files = [f for f in ['k2k-proxy.conf',
                           'etc/k2k-proxy.conf',
                           '/etc/k2k-proxy.conf'] if path.isfile(f)]
 
 if conf_files is not []:
     CONF(default_config_files=conf_files)
+
+log.setup(CONF, 'demo')
