@@ -131,9 +131,9 @@ def proxy(path):
 
 
 def main():
-    test = model.TestMe()
+    test = model.ResourceMapping('volume', 'volume1', 'sp1')
     model.insert(test)
-    model.read()
+    print(model.read())
     app.run(port=5001)
 
 if __name__ == "__main__":

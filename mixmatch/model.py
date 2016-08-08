@@ -13,6 +13,7 @@
 #   under the License.
 
 import sqlalchemy as sql
+from sqlalchemy.ext.declarative import declarative_base
 
 from mixmatch import config
 
@@ -22,8 +23,10 @@ from oslo_db.sqlalchemy import models
 
 CONF = config.CONF
 
+BASE = declarative_base(cls=models.ModelBase)
 
-class RemoteAuth(models.ModelBase):
+
+class RemoteAuth(BASE, models.ModelBase):
     __tablename__ = 'remote_auth'
     id = sql.Column(sql.Integer, primary_key=True)
     local_token = sql.Column(sql.String(255), nullable=False)
@@ -45,7 +48,7 @@ class RemoteAuth(models.ModelBase):
         self.endpoint_url = endpoint_url
 
 
-class ResourceMapping(models.ModelBase):
+class ResourceMapping(BASE, models.ModelBase):
     __tablename__ = 'resource_mapping'
     id = sql.Column(sql.Integer, primary_key=True)
     resource_type = sql.Column(sql.String(60), nullable=False)
@@ -58,18 +61,16 @@ class ResourceMapping(models.ModelBase):
         self.resource_sp = resource_sp
 
 
-class TestMe(models.ModelBase, models.TimestampMixin):
-    __tablename__ = 'test_me'
-    metadata = None
-    id = sql.Column(sql.Integer, primary_key=True)
-    label = sql.Column(sql.String(255))
-
-
 def insert(entity):
     context = enginefacade.transaction_context()
     with enginefacade.writer.using(context) as session:
         session.add(entity)
 
+def read():
+    context = enginefacade.transaction_context()
+    with enginefacade.reader.using(context) as session:
+        result = session.query(ResourceMapping).all()
+    return result
 
-# Create the tables
-# sql.create_all()
+
+BASE.metadata.create_all(enginefacade.get_legacy_facade().get_engine())
