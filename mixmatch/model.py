@@ -26,7 +26,7 @@ CONF = config.CONF
 BASE = declarative_base(cls=models.ModelBase)
 
 
-class RemoteAuth(BASE, models.ModelBase):
+class RemoteAuth(BASE):
     __tablename__ = 'remote_auth'
     id = sql.Column(sql.Integer, primary_key=True)
     local_token = sql.Column(sql.String(255), nullable=False)
@@ -58,7 +58,7 @@ class RemoteAuth(BASE, models.ModelBase):
         return auth
 
 
-class ResourceMapping(BASE, models.ModelBase):
+class ResourceMapping(BASE):
     __tablename__ = 'resource_mapping'
     id = sql.Column(sql.Integer, primary_key=True)
     resource_type = sql.Column(sql.String(60), nullable=False)
