@@ -36,9 +36,9 @@ class Request:
         self.mapping = None
         if len(self.action) > 1 and self.action[1] != "detail":
             self.resource = self.action[1]
-            self.mapping = model.ResourceMapping.\
-                query.filter_by(resource_type=self.action[0],
-                                resource_id=self.resource).first()
+            self.mapping = model.ResourceMapping.find(
+                resource_type=self.action[0],
+                resource_id=self.resource)
             self.aggregate = False
         else:
             self.aggregate = True
@@ -131,9 +131,11 @@ def proxy(path):
 
 
 def main():
-    test = model.ResourceMapping('volume', 'volume1', 'sp1')
-    model.insert(test)
-    print(model.read())
+    test1 = model.ResourceMapping('volume', 'volume1', 'sp1')
+    test2 = model.ResourceMapping('volume', 'volume2', 'sp2')
+    model.insert(test1)
+    model.insert(test2)
+    print(model.ResourceMapping.find('volume', 'volume2'))
     app.run(port=5001)
 
 if __name__ == "__main__":

@@ -47,6 +47,16 @@ class RemoteAuth(BASE, models.ModelBase):
         self.remote_project = remote_project
         self.endpoint_url = endpoint_url
 
+    @classmethod
+    def find(cls, local_token, service_provider):
+        context = enginefacade.transaction_context()
+        with enginefacade.reader.using(context) as session:
+            auth = session.query(RemoteAuth).filter_by(
+                local_token=local_token,
+                service_provider=service_provider
+            ).first()
+        return auth
+
 
 class ResourceMapping(BASE, models.ModelBase):
     __tablename__ = 'resource_mapping'
@@ -60,17 +70,23 @@ class ResourceMapping(BASE, models.ModelBase):
         self.resource_id = resource_id
         self.resource_sp = resource_sp
 
+    def __repr__(self):
+        return str((self.resource_type, self.resource_id, self.resource_sp))
+
+    @classmethod
+    def find(cls, resource_type, resource_id):
+        context = enginefacade.transaction_context()
+        with enginefacade.reader.using(context) as session:
+            mapping = session.query(ResourceMapping).filter_by(
+                resource_type=resource_type,
+                resource_id=resource_id
+            ).first()
+        return mapping
+
 
 def insert(entity):
     context = enginefacade.transaction_context()
     with enginefacade.writer.using(context) as session:
         session.add(entity)
-
-def read():
-    context = enginefacade.transaction_context()
-    with enginefacade.reader.using(context) as session:
-        result = session.query(ResourceMapping).all()
-    return result
-
 
 BASE.metadata.create_all(enginefacade.get_legacy_facade().get_engine())
