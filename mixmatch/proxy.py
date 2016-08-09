@@ -17,6 +17,7 @@ import os
 
 import requests
 
+from mixmatch.config import LOG
 from mixmatch.session import app, extensions
 from mixmatch.session import request
 from mixmatch import k2k
@@ -45,7 +46,7 @@ class Request:
 
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
-        print(self.local_token)
+        LOG.info('Local Token: %s ' % self.local_token)
 
         extension_uri = os.path.join(*self.action)
         self.extension = extensions['default']
@@ -55,7 +56,7 @@ class Request:
         if headers.has_key('MM-SERVICE-PROVIDER'):
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
         elif self.resource and self.mapping:
-            print("Found mapping")
+            LOG.info('Found mapping: %s' % self.mapping)
             self.service_providers = [self.mapping.resource_sp]
         else:
             self.service_providers = ['default', 'dsvm-sp', 'dsvm-sp2', 'dsvm-sp3']
@@ -92,10 +93,10 @@ class Request:
 
             if status >= 200 and status < 300 and not self.aggregate:
                 if self.resource and not self.mapping:
-                    print("Adding mapping")
                     mapping = model.ResourceMapping(resource_sp=sp,
                                                     resource_id=self.resource,
                                                     resource_type=self.action[0])
+                    LOG.info('Adding mapping: %s' % mapping)
                     model.insert(mapping)
                 break
 
