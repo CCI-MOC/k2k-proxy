@@ -12,7 +12,8 @@ Contents:
    :maxdepth: 1
 
    architecture
-
+   installation
+   usage
 
 
 Indices and tables
