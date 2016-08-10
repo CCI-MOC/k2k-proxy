@@ -36,7 +36,6 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'oslosphinx',
-    'oslo_config.sphinxconfiggen',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
