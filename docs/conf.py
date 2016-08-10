@@ -55,8 +55,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'k2k-proxy'
-copyright = u'2016, Kristi Nikolla'
-author = u'Kristi Nikolla'
+copyright = u'2016, Massachusetts Open Cloud'
+author = u'Massachusetts Open Cloud'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
