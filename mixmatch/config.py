@@ -21,13 +21,15 @@ LOG = log.getLogger('root')
 
 CONF = cfg.CONF
 
+SERVICE_PROVIDERS = []
+
 # Proxy
 proxy_group = cfg.OptGroup(name='proxy',
                            title='Proxy Config Group')
 
 proxy_opts = [
-    cfg.StrOpt('database_uri',
-               default='sqlite://',
+    cfg.ListOpt('service_providers',
+               default=None,
                help='Database URI')
 ]
 
@@ -76,5 +78,35 @@ conf_files = [f for f in ['k2k-proxy.conf',
 
 if conf_files is not []:
     CONF(default_config_files=conf_files)
+
+    if CONF.proxy.service_providers:
+        for service_provider in CONF.proxy.service_providers:
+
+            sp_group = cfg.OptGroup(name='sp_%s' % service_provider,
+                                    title=service_provider)
+            sp_opts = [
+                cfg.StrOpt('service_provider',
+                           help='Service Provider ID'),
+
+                cfg.StrOpt('endpoint_type',
+                           help='Endpoint Type'),
+
+                cfg.StrOpt('endpoint_url',
+                           help='Endpoint URL'),
+
+                cfg.StrOpt('host',
+                           help='AMQP Host'),
+
+                cfg.StrOpt('username',
+                           help='AMQP Username'),
+
+                cfg.StrOpt('password',
+                           help='AMQP Password')
+            ]
+
+            CONF.register_group(sp_group)
+            CONF.register_opts(sp_opts, sp_group)
+
+            SERVICE_PROVIDERS.append(CONF.__getattr__('sp_%s' % service_provider))
 
 log.setup(CONF, 'demo')
