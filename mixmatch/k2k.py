@@ -12,21 +12,31 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import json
 import os
 
 from keystoneauth1 import identity
 from keystoneauth1 import session
+import requests
 
-from mixmatch import config
+from mixmatch.config import CONF
 from mixmatch import model
 
-CONF = config.CONF
 
-
-def get_sp_auth(service_provider, user_token, local_project_id=None):
+def get_sp_auth(service_provider, user_token, service):
     # Use K2K to get a scoped token for the SP
     # For some reason if I authenticate with the PROJECT_ID
     # It doesn't like me
+
+    url = '%s/projects' % CONF.keystone.auth_url
+    headers = {'X-AUTH-TOKEN': user_token}
+    resp = requests.get(url=url, headers=headers)
+    projects = json.loads(resp.text)
+
+    # Is this the project we're really scoped to?
+    local_project_id = projects['projects'][2]['id']
+    local_project_name = projects['projects'][2]['name']
+    local_project_domain_id = projects['projects'][2]['domain_id']
 
     auth = model.RemoteAuth.find(local_token=user_token,
                                  service_provider=service_provider).first()
@@ -35,18 +45,19 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
         print("Not cached")
         local_auth = identity.v3.Token(auth_url=CONF.keystone.auth_url,
                                        token=user_token,
-                                       project_name='admin',
-                                       project_domain_id='default')
+                                       project_id=local_project_id)
 
-        remote_auth = identity.v3.Keystone2Keystone(local_auth,
-                                                    service_provider,
-                                                    project_name='admin',  # FIXME
-                                                    project_domain_id='default')  # FIXME
+        remote_auth = identity.v3.Keystone2Keystone(
+            local_auth,
+            service_provider,
+            project_name=local_project_name,
+            project_domain_id=local_project_domain_id
+        )
 
         remote_session = session.Session(auth=remote_auth)
         auth_ref = remote_auth.get_auth_ref(remote_session)
 
-        endpoint = auth_ref.service_catalog.url_for(service_type='volumev2')
+        endpoint = auth_ref.service_catalog.url_for(service_type=service)
         remote_project = os.path.basename(endpoint)
         remote_token = auth_ref._auth_token
 
@@ -58,6 +69,7 @@ def get_sp_auth(service_provider, user_token, local_project_id=None):
             endpoint_url=endpoint
         )
 
-        model.insert(auth)
+        if CONF.proxy.token_caching:
+            model.insert(auth)
 
     return auth

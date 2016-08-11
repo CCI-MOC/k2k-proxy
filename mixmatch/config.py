@@ -26,9 +26,26 @@ proxy_group = cfg.OptGroup(name='proxy',
                            title='Proxy Config Group')
 
 proxy_opts = [
+    cfg.IntOpt('port',
+               default=5001,
+               help='Web Server Port'),
+
     cfg.ListOpt('service_providers',
                default=None,
-               help='List of service providers')
+               help='List of service providers'),
+
+    cfg.StrOpt('volume_endpoint',
+               help='Local Volume Endpoint'),
+
+    cfg.StrOpt('image_endpoint',
+               help='Local Image Endpoint'),
+
+    cfg.BoolOpt('search_by_broadcast',
+                help='Search All Service Providers on Unknown Resource ID'),
+
+    cfg.BoolOpt('token_caching',
+                default=False,
+                help='Cache Tokens for the Service Providers. UNSAFE!')
 ]
 
 # Keystone

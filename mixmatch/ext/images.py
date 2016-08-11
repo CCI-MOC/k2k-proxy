@@ -12,20 +12,20 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import flask
+import json
 
-from mixmatch import config
+from mixmatch.ext import base
 
-from mixmatch.ext.base import BaseExtension
-from mixmatch.ext.volumes import VolumeAggregator
-from mixmatch.ext.images import ImageAggregator
 
-CONF = config.CONF
+class ImageAggregator(base.BaseExtension):
+    def __init__(self):
+        self.aggregator = True
 
-app = flask.Flask(__name__)
-request = flask.request
+    def aggregate(self, response):
+        image_list = []
+        for sp, sp_response in response.iteritems():
+            images = json.loads(sp_response.text)
+            if type(images) == dict:
+                image_list += images["images"]
 
-extensions = dict()
-extensions['default'] = BaseExtension()
-extensions['volumes'] = VolumeAggregator()
-extensions['images'] = ImageAggregator()
+        return json.dumps({ "images": image_list})

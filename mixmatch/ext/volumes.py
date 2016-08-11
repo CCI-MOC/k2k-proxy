@@ -24,7 +24,7 @@ class VolumeAggregator(base.BaseExtension):
     def aggregate(self, response):
         volume_list = []
         for sp, sp_response in response.iteritems():
-            volumes = json.loads(sp_response)
+            volumes = json.loads(sp_response.text)
             if type(volumes) == dict:
                 volume_list += volumes["volumes"]
 
