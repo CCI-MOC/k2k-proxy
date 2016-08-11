@@ -15,13 +15,11 @@
 import sqlalchemy as sql
 from sqlalchemy.ext.declarative import declarative_base
 
-from mixmatch import config
+from mixmatch.config import CONF
 
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import models
 
-
-CONF = config.CONF
 
 BASE = declarative_base(cls=models.ModelBase)
 
@@ -64,10 +62,12 @@ class ResourceMapping(BASE):
     resource_type = sql.Column(sql.String(60), nullable=False)
     resource_id = sql.Column(sql.String(255), nullable=False)
     resource_sp = sql.Column(sql.String(255), nullable=False)
+    tenant_id = sql.Column(sql.String(255), nullable=False)
 
-    def __init__(self, resource_type, resource_id, resource_sp):
+    def __init__(self, resource_type, resource_id, tenant_id, resource_sp):
         self.resource_type = resource_type
         self.resource_id = resource_id
+        self.tenant_id = tenant_id
         self.resource_sp = resource_sp
 
     def __repr__(self):
@@ -88,5 +88,12 @@ def insert(entity):
     context = enginefacade.transaction_context()
     with enginefacade.writer.using(context) as session:
         session.add(entity)
+
+
+def delete(entity):
+    context = enginefacade.transaction_context()
+    with enginefacade.writer.using(context) as session:
+        session.delete(entity)
+
 
 BASE.metadata.create_all(enginefacade.get_legacy_facade().get_engine())

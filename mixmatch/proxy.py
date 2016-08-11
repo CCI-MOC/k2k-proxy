@@ -132,8 +132,8 @@ def proxy(path):
 
 
 def main():
-    test1 = model.ResourceMapping('volume', 'volume1', 'sp1')
-    test2 = model.ResourceMapping('volume', 'volume2', 'sp2')
+    test1 = model.ResourceMapping('volume', 'volume1', 'proj1', 'sp1')
+    test2 = model.ResourceMapping('volume', 'volume2', 'proj2', 'sp2')
     model.insert(test1)
     model.insert(test2)
     print(model.ResourceMapping.find('volume', 'volume2'))
