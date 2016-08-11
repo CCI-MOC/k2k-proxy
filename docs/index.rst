@@ -9,10 +9,11 @@ Welcome to k2k-proxy's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    architecture
-
+   installation
+   usage
 
 
 Indices and tables

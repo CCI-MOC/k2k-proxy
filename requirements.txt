@@ -6,3 +6,4 @@ oslo.log
 oslo.db
 python-keystoneclient
 requests
+oslosphinx
