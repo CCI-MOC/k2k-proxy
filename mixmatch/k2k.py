@@ -23,7 +23,7 @@ from mixmatch.config import CONF
 from mixmatch import model
 
 
-def get_sp_auth(service_provider, user_token, service):
+def get_sp_auth(service_provider, user_token, service, remote_project_id=None):
     # Use K2K to get a scoped token for the SP
     # For some reason if I authenticate with the PROJECT_ID
     # It doesn't like me
@@ -39,19 +39,20 @@ def get_sp_auth(service_provider, user_token, service):
     local_project_domain_id = projects['projects'][2]['domain_id']
 
     auth = model.RemoteAuth.find(local_token=user_token,
-                                 service_provider=service_provider).first()
+                                 service_provider=service_provider)
     print("Auth: %s" % str(auth))
     if auth is None:
         print("Not cached")
         local_auth = identity.v3.Token(auth_url=CONF.keystone.auth_url,
                                        token=user_token,
-                                       project_id=local_project_id)
+                                       project_name='admin',
+                                       project_domain_id='default')
 
         remote_auth = identity.v3.Keystone2Keystone(
             local_auth,
             service_provider,
-            project_name=local_project_name,
-            project_domain_id=local_project_domain_id
+            project_name='admin',
+            project_domain_id='default'
         )
 
         remote_session = session.Session(auth=remote_auth)

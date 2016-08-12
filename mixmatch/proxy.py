@@ -35,6 +35,9 @@ class Request:
         self.method = method
         self.headers = headers
 
+        # Don't stream response by default
+        self.stream = False
+
         self.request_path = path.split('/')
         self.version = self.request_path[0]
         if self.request_path[1] in GLANCE_APIS:
@@ -43,6 +46,17 @@ class Request:
             self.service_type = 'image'
             self.local_project = None
             self.action = self.request_path[1:]
+
+            # Downloading an image requires streaming!
+            # If Image API v1, always stream for now
+            # This is because the download call in v2 is /file
+            # but in v1 is just /images/<image_id> which is very
+            # hard to distinguish.
+            if 'file' in self.action:
+                self.stream = True
+            if self.version == 'v1' and self.method == 'GET' \
+                    and len(self.action) == 2:
+                self.stream = True
         else:
             # Volume API calls look like
             # /{version}/{project_id}/{action}
@@ -53,19 +67,18 @@ class Request:
             else:
                 self.service_type = 'volumev2'
 
-        # Don't stream response by default
-        self.stream = False
-
         self.resource_id = None
         self.mapping = None
+        self.aggregate = False
         if len(self.action) > 1 and self.action[1] != "detail":
             self.resource_id = self.action[1]
             self.mapping = model.ResourceMapping.find(
                 resource_type=self.action[0],
                 resource_id=self.resource_id)
-            self.aggregate = False
         else:
-            self.aggregate = True
+            if self.method == 'GET':
+                # We don't want to create stuff everywhere!
+                self.aggregate = True
 
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
@@ -82,25 +95,28 @@ class Request:
         else:
             if self.resource_id:
                 # The user is looking for a specific resource.
-                if __name__ == '__main__':
-                    if self.mapping:
-                        # Which we already know the location of, use that SP.
-                        self.service_providers = [self.mapping.resource_sp]
+                if self.mapping:
+                    # Which we already know the location of, use that SP.
+                    self.service_providers = [self.mapping.resource_sp]
+                else:
+                    # We don't know about the location of this resource.
+                    if CONF.proxy.search_by_broadcast:
+                        # But searching is enabled, ask all enabled SPs.
+                        self.service_providers = CONF.proxy.service_providers
                     else:
-                        # We don't know about the location of this resource.
-                        if CONF.proxy.search_by_broadcast:
-                            # But searching is enabled, ask all enabled SPs.
-                            self.service_providers = CONF.proxy.service_providers
-                        else:
-                            # Searching is not enabled, return 404
-                            flask.abort(404)
+                        # Searching is not enabled, just ask local.
+                        self.service_providers = ['default']
             else:
-                # We're not looking for a specific Resource, ask all.
-                self.service_providers = CONF.proxy.service_providers
+                # We're not looking for a specific Resource.
+                if CONF.proxy.aggregation and self.aggregate:
+                    # If aggregation is enabled, ask all.
+                    self.service_providers = CONF.proxy.service_providers
+                else:
+                    # Just ask local.
+                    self.service_providers = ['default']
 
     def forward(self):
         responses = dict()
-        text = None
         status = None
         for sp in self.service_providers:
             print ("Querying: %s" % sp)
@@ -118,14 +134,6 @@ class Request:
                                     'action': os.path.join(*self.action)
                     }
 
-                    # Downloading an image requires streaming!
-                    # If Image API v1, always stream for now
-                    # This is because the download call in v2 is /file
-                    # but in v1 is just /images/<image_id>
-                    if 'file' in self.action:
-                        self.stream = True
-                    if self.version == 'v1':
-                        self.stream = True
                 elif self.service_type in ['volume', 'volumev2']:
                     remote_url = "%(endpoint)s/%(version)s/" \
                                  "%(project)s/%(action)s" % {
@@ -135,28 +143,33 @@ class Request:
                                      'action': os.path.join(*self.action)
                     }
             else:
-                auth = k2k.get_sp_auth(sp, self.local_token, self.service_type)
+                remote_project_id = None
+                if self.mapping:
+                    remote_project_id = self.mapping.tenant_id
+                auth = k2k.get_sp_auth(sp,
+                                       self.local_token,
+                                       self.service_type,
+                                       remote_project_id)
                 headers['X-AUTH-TOKEN'] = auth.remote_token
-                remote_url = os.path.join(auth.endpoint_url,
+
+                # The glance endpoint from the service catalog is missing
+                # the API version.
+                endpoint_url = auth.endpoint_url
+                if self.service_type == 'image':
+                    endpoint_url += '/' + self.version
+
+                remote_url = os.path.join(endpoint_url,
                                           os.path.join(*self.action))
 
             # Send the request to the SP
             response = self._request(remote_url, headers)
-            print("Path: %s" % self.request_path)
-            print(self.action)
-            print("Remote URL: %s" % remote_url)
-            print(status)
-            print(request.data)
-
             responses[sp] = response
 
-            if status >= 200 < 300 and not self.aggregate:
-                if self.resource_id and not self.mapping:
-                    mapping = model.ResourceMapping(resource_sp=sp,
-                                                    resource_id=self.resource_id,
-                                                    resource_type=self.action[0])
-                    LOG.info('Adding mapping: %s' % mapping)
-                    model.insert(mapping)
+            LOG.info("Remote URL: %s, Status: %s, Data: %s" %
+                     (remote_url, response.status_code, str(request.data)))
+
+            # If we're looking for a specific resource and we found it
+            if 200 <= response.status_code < 300 and self.resource_id:
                 break
 
         # If the request is for listing images or volumes
@@ -166,20 +179,25 @@ class Request:
                 text = extensions[self.action[0]].aggregate(responses)
             else:
                 text = extensions['default'].aggregate(responses)
-            status = 200
-            return text, status
-
-        if not self.stream:
             return flask.Response(
-                response.text,
-                response.status_code,
+                text,
+                200,
                 content_type=response.headers['content-type']
             )
+
+        if not self.stream:
+            final_response = flask.Response(
+                response.text,
+                response.status_code
+            )
+            for key, value in response.headers.iteritems():
+                final_response.headers[key] = value
         else:
-            return flask.Response(
+            final_response = flask.Response(
                 flask.stream_with_context(stream_response(response)),
                 content_type=response.headers['content-type']
             )
+        return final_response
 
     def _request(self, url, headers):
         # If ending with /, strip it
@@ -220,12 +238,7 @@ def proxy(path):
 
 
 def main():
-    test1 = model.ResourceMapping('volume', 'volume1', 'proj1', 'sp1')
-    test2 = model.ResourceMapping('volume', 'volume2', 'proj2', 'sp2')
-    model.insert(test1)
-    model.insert(test2)
-    print(model.ResourceMapping.find('volume', 'volume2'))
-    app.run(port=5001)
+    app.run(port=5001, threaded=True)
 
 if __name__ == "__main__":
     main()

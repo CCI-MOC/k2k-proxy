@@ -45,7 +45,11 @@ proxy_opts = [
 
     cfg.BoolOpt('token_caching',
                 default=False,
-                help='Cache Tokens for the Service Providers. UNSAFE!')
+                help='Cache Tokens for the Service Providers. UNSAFE!'),
+
+    cfg.BoolOpt('aggregation',
+                default=False,
+                help='Enable Aggregation when listing resources.')
 ]
 
 # Keystone
