@@ -6,6 +6,9 @@ Install dependencies. ::
 
     $ pip install -r requirements.txt
 
+The proxy will be set up in one OpenStack installation, called the Identity
+Provider, or IdP, and it redirect API calls to either the local services, or
+remote services in one of several Service Provider installations (SP).
 
 Configuration
 =============
@@ -19,12 +22,22 @@ source code.
 The proxy will substitute the endpoint of the service it is proxying.
 Only Cinder and Glance are supported for now.
 
+For each SP, you must have a section in ``k2k-proxy.conf`` which contains the
+service provider name (as it is listed in Keystone's service catalog), and the
+URI for connecting to the notification messagebus in that OpenStack
+installation.  For instance::
+
+    [sp_one]
+    sp_name="keystone-sp1"
+    messagebus="rabbit://rabbituser:rabbitpassword@192.168.7.20"
+
 Keystone Configuration
 ----------------------
+
 Keystone maintains the service catalog with information about all the
 configured endpoints.
 
-Delete and then recreate the endpoint which we will proxy. ::
+In the IdP, delete and then recreate the endpoint which we will proxy. ::
 
     $ openstack endpoint delete <endpoint_id>
     $ openstack endpoint create \
@@ -36,10 +49,22 @@ Delete and then recreate the endpoint which we will proxy. ::
 
 Nova Configuration
 ------------------
-Nova reads the endpoint address for glance from the configuration file stored
-in ``/etc/nova.conf``. ::
 
-    # /etc/nova.conf
+Nova reads the endpoint address for glance from the configuration file stored
+in ``/etc/nova/nova.conf``. So, in the IdP, add the following::
+
+    # /etc/nova/nova.conf
     [glance]
     host=http://<proxy_host>:<proxy_port>
+
+Cinder Notification
+-------------------
+
+Every Cinder must be configured to emit notifications on the messagebus.  So,
+in both the IdP and every SP, add the following to
+``/etc/cinder/cinder.conf``::
+
+    [oslo_messaging_notifications]
+    driver = messaging
+    topics = notifications
 
