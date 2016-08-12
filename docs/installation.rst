@@ -55,7 +55,8 @@ in ``/etc/nova/nova.conf``. So, in the IdP, add the following::
 
     # /etc/nova/nova.conf
     [glance]
-    host=http://<proxy_host>:<proxy_port>
+    host=<proxy_host>
+    port=<proxy_port>
 
 Cinder Notification
 -------------------
