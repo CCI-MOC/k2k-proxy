@@ -1,7 +1,9 @@
+eventlet
 flask
 sqlalchemy
 keystoneauth
 oslo.config
+oslo.messaging
 oslo.log
 oslo.db
 python-keystoneclient

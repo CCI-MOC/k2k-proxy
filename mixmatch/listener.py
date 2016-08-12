@@ -8,12 +8,14 @@ import eventlet
 
 eventlet.monkey_patch()
 
+
 class VolumeCreateEndpoint(object):
     def __init__(self, sp_name):
         self.sp_name = sp_name
     filter_rule = oslo_messaging.NotificationFilter(
             publisher_id='^volume.*',
             event_type='^volume.create.start$')
+
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating volume mapping %s -> %s at %s' % (
                 payload['volume_id'],
@@ -24,18 +26,21 @@ class VolumeCreateEndpoint(object):
                 payload['tenant_id'],
                 self.sp_name))
 
+
 class VolumeDeleteEndpoint(object):
     def __init__(self, sp_name):
         self.sp_name = sp_name
     filter_rule = oslo_messaging.NotificationFilter(
             publisher_id='^volume.*',
             event_type='^volume.delete.end$')
+
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Deleting volume mapping %s -> %s at %s' % (
                 payload['volume_id'],
                 payload['tenant_id'],
                 self.sp_name))
         delete(ResourceMapping.find("volume", payload['volume_id']))
+
 
 def get_server_for_sp(sp):
     cfg = CONF.__getattr__('sp_%s' % sp)
