@@ -74,7 +74,7 @@ class Request:
             self.resource_id = self.action[1]
             self.mapping = model.ResourceMapping.find(
                 resource_type=self.action[0],
-                resource_id=self.resource_id)
+                resource_id=self.resource_id.replace("-", ""))
         else:
             if self.method == 'GET':
                 # We don't want to create stuff everywhere!
