@@ -61,6 +61,13 @@ in ``/etc/nova/nova.conf``. So, in the IdP, add the following::
 Cinder Notification
 -------------------
 
+Cinder reads the endpoint address for glance from the configuration file stored
+in ``/etc/cinder/cinder.conf``. So, in the IdP, add the following::
+
+    # /etc/cinder/cinder.conf
+    [default]
+    glance_api_servers=<proxy_url>
+
 Every Cinder must be configured to emit notifications on the messagebus.  So,
 in both the IdP and every SP, add the following to
 ``/etc/cinder/cinder.conf``::
