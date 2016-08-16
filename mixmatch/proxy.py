@@ -217,7 +217,6 @@ def proxy(path):
 
 
 def main():
-    import pdb; pdb.set_trace()
     app.run(port=5001, threaded=True)
 
 if __name__ == "__main__":
