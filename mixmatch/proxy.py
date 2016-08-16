@@ -88,8 +88,6 @@ class Request:
         self.extension = extensions['default']
         if extensions.has_key(extension_uri):
             self.extension = extensions[extension_uri]
-	print("%$$$$%$")
-	print(CONF.proxy.service_providers[0])
         if headers.has_key('MM-SERVICE-PROVIDER'):
             # The user wants a specific service provider, use that SP.
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
