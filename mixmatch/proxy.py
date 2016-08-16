@@ -88,7 +88,6 @@ class Request:
         self.extension = extensions['default']
         if extensions.has_key(extension_uri):
             self.extension = extensions[extension_uri]
-
         if headers.has_key('MM-SERVICE-PROVIDER'):
             # The user wants a specific service provider, use that SP.
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
@@ -105,7 +104,7 @@ class Request:
                         self.service_providers = CONF.proxy.service_providers
                     else:
                         # Searching is not enabled, just ask local.
-                        self.service_providers = ['default']
+                        self.service_providers = CONF.proxy.service_providers[:1]
             else:
                 # We're not looking for a specific Resource.
                 if CONF.proxy.aggregation and self.aggregate:
@@ -113,7 +112,7 @@ class Request:
                     self.service_providers = CONF.proxy.service_providers
                 else:
                     # Just ask local.
-                    self.service_providers = ['default']
+                    self.service_providers = CONF.proxy.service_providers[:1]
 
     def forward(self):
         responses = dict()
@@ -200,38 +199,18 @@ class Request:
         return final_response
 
     def _request(self, url, headers):
-        # If ending with /, strip it
-        if url[-1] == '/':
-            url = url[:-1]
-
-        response = None
-        if self.method == 'GET':
-            response = requests.get(url,
+        response = requests.request(method=self.method,
+				    url=url,
                                     headers=headers,
                                     data=request.data,
                                     stream=self.stream)
-        elif self.method == 'PUT':
-            response = requests.put(url,
-                                    headers=headers,
-                                    data=request.data)
-        elif self.method == 'POST':
-            response = requests.post(url,
-                                     headers=headers,
-                                     data=request.data)
-        elif self.method == 'DELETE':
-            response = requests.delete(url,
-                                       headers=headers)
-        elif self.method == 'HEAD':
-            response = requests.head(url, headers=headers,
-                                     data=request.data)
-
         return response
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET','POST', 'PUT',
-                                                'DELETE', 'HEAD'])
+                                                'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:path>', methods=['GET', 'POST', 'PUT',
-                                    'DELETE', 'HEAD'])
+                                    'DELETE', 'HEAD', 'PATCH'])
 def proxy(path):
     k2k_request = Request(request.method, path, request.headers)
     return k2k_request.forward()
