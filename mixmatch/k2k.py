@@ -12,41 +12,34 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import json
 import os
-
 from keystoneauth1 import identity
 from keystoneauth1 import session
-import requests
-
+from keystoneclient import v3
 from mixmatch.config import CONF
 from mixmatch import model
 
-
 def get_sp_auth(service_provider, user_token, service, remote_project_id=None):
-    # Use K2K to get a scoped token for the SP
-    # For some reason if I authenticate with the PROJECT_ID
-    # It doesn't like me
 
-    url = '%s/projects' % CONF.keystone.auth_url
-    headers = {'X-AUTH-TOKEN': user_token}
-    resp = requests.get(url=url, headers=headers)
-    projects = json.loads(resp.text)
-
-    # Is this the project we're really scoped to?
-    local_project_id = projects['projects'][2]['id']
-    local_project_name = projects['projects'][2]['name']
-    local_project_domain_id = projects['projects'][2]['domain_id']
+    idp_auth = identity.Password(auth_url=CONF.keystone.auth_url,
+                                 username=CONF.keystone.username,
+                                 password=CONF.keystone.password,
+			         project_name=CONF.keystone.project_name,
+			         project_domain_id=CONF.keystone.project_domain_id,
+			         user_domain_id=CONF.keystone.user_domain_id)
+    local_session = session.Session(auth=idp_auth)
+    client = v3.client.Client(session=local_session)
+    token = v3.tokens.TokenManager(client)
+    token_data = token.validate(token=user_token, include_catalog=False)
+    project_id = token_data['project']['id']
 
     auth = model.RemoteAuth.find(local_token=user_token,
                                  service_provider=service_provider)
-    print("Auth: %s" % str(auth))
     if auth is None:
         print("Not cached")
         local_auth = identity.v3.Token(auth_url=CONF.keystone.auth_url,
                                        token=user_token,
-                                       project_name='admin',
-                                       project_domain_id='default')
+                                       project_id=project_id)
 
         remote_auth = identity.v3.Keystone2Keystone(
             local_auth,
