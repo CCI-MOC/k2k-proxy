@@ -12,22 +12,20 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import flask
+import json
 
-from mixmatch import config
+from mixmatch.ext import base
 
-from mixmatch.ext.base import BaseExtension
-from mixmatch.ext.volumes import VolumeAggregator
-from mixmatch.ext.images import ImageAggregator
-from mixmatch.ext.snapshots import SnapshotAggregator
 
-CONF = config.CONF
+class SnapshotAggregator(base.BaseExtension):
+    def __init__(self):
+        self.aggregator = True
 
-app = flask.Flask(__name__)
-request = flask.request
+    def aggregate(self, response):
+        snapshot_list = []
+        for sp, sp_response in response.iteritems():
+            snapshots = json.loads(sp_response.text)
+            if type(snapshots) == dict:
+                snapshot_list += snapshots["snapshots"]
 
-extensions = dict()
-extensions['default'] = BaseExtension()
-extensions['volumes'] = VolumeAggregator()
-extensions['images'] = ImageAggregator()
-extensions['snapshots'] = SnapshotAggregator()
+        return json.dumps({ "snapshots": snapshot_list})

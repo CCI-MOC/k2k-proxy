@@ -79,7 +79,6 @@ class Request:
             if self.method == 'GET':
                 # We don't want to create stuff everywhere!
                 self.aggregate = True
-
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
         LOG.info('Local Token: %s ' % self.local_token)
