@@ -9,3 +9,7 @@ oslo.db
 python-keystoneclient
 requests
 oslosphinx
+
+os-testr
+testtools
+tox
