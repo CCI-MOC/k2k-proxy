@@ -10,6 +10,6 @@ python-keystoneclient
 requests
 oslosphinx
 
+# Testing 
 os-testr
 testtools
-tox
