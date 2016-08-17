@@ -97,3 +97,6 @@ ENV/
 #pbr
 AUTHORS
 ChangeLog
+
+# Testing
+.testrepository
