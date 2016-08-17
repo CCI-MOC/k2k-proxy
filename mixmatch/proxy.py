@@ -199,12 +199,11 @@ class Request:
         return final_response
 
     def _request(self, url, headers):
-        response = requests.request(method=self.method,
-				    url=url,
-                                    headers=headers,
-                                    data=request.data,
-                                    stream=self.stream)
-        return response
+        return requests.request(method=self.method,
+                                url=url,
+                                headers=headers,
+                                data=request.data,
+                                stream=self.stream)
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET','POST', 'PUT',
