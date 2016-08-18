@@ -16,6 +16,7 @@ from os import path
 
 from oslo_config import cfg
 from oslo_log import log
+from oslo_cache import core as cache
 
 LOG = log.getLogger('root')
 
@@ -43,14 +44,25 @@ proxy_opts = [
     cfg.BoolOpt('search_by_broadcast',
                 help='Search All Service Providers on Unknown Resource ID'),
 
-    cfg.BoolOpt('token_caching',
-                default=False,
-                help='Cache Tokens for the Service Providers. UNSAFE!'),
-
     cfg.BoolOpt('aggregation',
                 default=False,
-                help='Enable Aggregation when listing resources.')
+                help='Enable Aggregation when listing resources.'),
+
+    cfg.BoolOpt('caching',
+                default=False,
+                help='Enable token caching using oslo.cache')
+
+    cfg.IntOpt('cache_time',
+                default=600,
+                help='How long to store cached tokens for')
 ]
+
+# Oslo.Cache
+cache.configure(CONF)
+token_cache_region = cache.create_region()
+cache.configure_cache_region(token_cache_region)
+MEMOIZE_TOKEN = cache.get_memoization_decorator(CONF,
+    token_cache_region, "proxy")
 
 # Keystone
 keystone_group = cfg.OptGroup(name='keystone',
