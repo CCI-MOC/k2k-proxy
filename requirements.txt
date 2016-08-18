@@ -2,6 +2,7 @@ eventlet
 flask
 sqlalchemy
 keystoneauth
+oslo.cache
 oslo.config
 oslo.messaging
 oslo.log
