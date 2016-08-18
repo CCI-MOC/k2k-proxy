@@ -12,12 +12,11 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import os
 from keystoneauth1 import identity
 from keystoneauth1 import session
 from keystoneclient import v3
+
 from mixmatch.config import CONF
-from mixmatch import model
 
 
 def get_client():

@@ -24,7 +24,7 @@ CONF = cfg.CONF
 
 
 def get_conf_for_sp(sp_id):
-    CONF.__getattr__('sp_%s' % sp_id)
+    return CONF.__getattr__('sp_%s' % sp_id)
 
 # Proxy
 proxy_group = cfg.OptGroup(name='proxy',

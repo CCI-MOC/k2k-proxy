@@ -133,7 +133,6 @@ class Request:
                     remote_project_id = self.mapping.tenant_id
                 auth_session = auth.get_sp_auth(sp,
                                                 self.local_token,
-                                                self.service_type,
                                                 remote_project_id)
 
             headers['X-AUTH-TOKEN'] = auth_session.get_token()

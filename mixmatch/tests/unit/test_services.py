@@ -19,5 +19,5 @@ class TestNothing(testcase.TestCase):
     def setUp(self):
         super(TestNothing, self).setUp()
 
-    def test_nothing(self):
+    def test_construct_url(self):
         self.assertEqual(1, 1)

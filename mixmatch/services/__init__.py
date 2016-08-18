@@ -19,8 +19,7 @@ from mixmatch.services import volume
 def construct_url(service_provider, service_type,
                   version, action, project_id=None):
     if service_type == 'image':
-        image.construct_url(service_provider, version, action)
-
+        return image.construct_url(service_provider, version, action)
     elif service_type in ['volume', 'volumev2']:
-        volume.construct_url(service_provider, version, action,
-                             project_id=project_id)
+        return volume.construct_url(service_provider, version, action,
+                                    project_id=project_id)
