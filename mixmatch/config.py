@@ -54,7 +54,7 @@ proxy_opts = [
 
     cfg.BoolOpt('caching',
                 default=False,
-                help='Enable token caching using oslo.cache')
+                help='Enable token caching using oslo.cache'),
 
     cfg.IntOpt('cache_time',
                 default=600,
