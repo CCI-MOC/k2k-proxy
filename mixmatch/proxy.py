@@ -141,6 +141,7 @@ class Request:
             remote_url = services.construct_url(
                 sp,
                 self.service_type,
+                self.version,
                 self.action,
                 project_id=auth_session.get_project_id()
             )
