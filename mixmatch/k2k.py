@@ -33,8 +33,7 @@ def get_sp_auth(service_provider, user_token, service, remote_project_id=None):
     token_data = token.validate(token=user_token, include_catalog=False)
     project_id = token_data['project']['id']
 
-    auth = model.RemoteAuth.find(local_token=user_token,
-                                 service_provider=service_provider)
+    auth = None
     if auth is None:
         print("Not cached")
         local_auth = identity.v3.Token(auth_url=CONF.keystone.auth_url,
@@ -62,8 +61,5 @@ def get_sp_auth(service_provider, user_token, service, remote_project_id=None):
             remote_project=remote_project,
             endpoint_url=endpoint
         )
-
-        if CONF.proxy.token_caching:
-            model.insert(auth)
 
     return auth
