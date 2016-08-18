@@ -20,8 +20,9 @@ import flask
 from mixmatch.config import LOG, CONF
 from mixmatch.session import app, extensions
 from mixmatch.session import request
-from mixmatch import k2k
+from mixmatch import auth
 from mixmatch import model
+from mixmatch import services
 
 GLANCE_APIS = ['images', 'schemas', 'metadefs', 'tasks']
 
@@ -122,42 +123,28 @@ class Request:
             headers = dict()
             headers["Accept"] = "application/json"
             headers["Content-Type"] = "application/json"
+
             if sp == 'default':
-                headers['X-AUTH-TOKEN'] = self.local_token
+                auth_session = auth.get_local_auth(self.local_token)
 
-                if self.service_type == 'image':
-                    remote_url = "%(endpoint)s/%(version)s/%(action)s" % {
-                                    'endpoint': CONF.proxy.image_endpoint,
-                                    'version': self.version,
-                                    'action': os.path.join(*self.action)
-                    }
-
-                elif self.service_type in ['volume', 'volumev2']:
-                    remote_url = "%(endpoint)s/%(version)s/" \
-                                 "%(project)s/%(action)s" % {
-                                     'endpoint': CONF.proxy.volume_endpoint,
-                                     'version': self.version,
-                                     'project': self.local_project,
-                                     'action': os.path.join(*self.action)
-                    }
             else:
                 remote_project_id = None
                 if self.mapping:
                     remote_project_id = self.mapping.tenant_id
-                auth = k2k.get_sp_auth(sp,
-                                       self.local_token,
-                                       self.service_type,
-                                       remote_project_id)
-                headers['X-AUTH-TOKEN'] = auth.remote_token
+                auth_session = auth.get_sp_auth(sp,
+                                                self.local_token,
+                                                self.service_type,
+                                                remote_project_id)
 
-                # The glance endpoint from the service catalog is missing
-                # the API version.
-                endpoint_url = auth.endpoint_url
-                if self.service_type == 'image':
-                    endpoint_url += '/' + self.version
+            headers['X-AUTH-TOKEN'] = auth_session.get_token()
+            project_id = auth_session.get_project_id()
 
-                remote_url = os.path.join(endpoint_url,
-                                          os.path.join(*self.action))
+            remote_url = services.construct_url(
+                sp,
+                self.service_type,
+                self.action,
+                project_id=auth_session.get_project_id()
+            )
 
             # Send the request to the SP
             response = self._request(remote_url, headers)

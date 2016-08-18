@@ -24,38 +24,6 @@ from oslo_db.sqlalchemy import models
 BASE = declarative_base(cls=models.ModelBase)
 
 
-class RemoteAuth(BASE):
-    __tablename__ = 'remote_auth'
-    id = sql.Column(sql.Integer, primary_key=True)
-    local_token = sql.Column(sql.String(255), nullable=False)
-    service_provider = sql.Column(sql.String(255), nullable=False)
-    remote_token = sql.Column(sql.String(255), nullable=False)
-    remote_project = sql.Column(sql.String(255), nullable=False)
-    endpoint_url = sql.Column(sql.String(255), nullable=False)
-
-    def __init__(self,
-                 local_token,
-                 service_provider,
-                 remote_token,
-                 remote_project,
-                 endpoint_url):
-        self.local_token = local_token
-        self.service_provider = service_provider
-        self.remote_token = remote_token
-        self.remote_project = remote_project
-        self.endpoint_url = endpoint_url
-
-    @classmethod
-    def find(cls, local_token, service_provider):
-        context = enginefacade.transaction_context()
-        with enginefacade.reader.using(context) as session:
-            auth = session.query(RemoteAuth).filter_by(
-                local_token=local_token,
-                service_provider=service_provider
-            ).first()
-        return auth
-
-
 class ResourceMapping(BASE):
     __tablename__ = 'resource_mapping'
     id = sql.Column(sql.Integer, primary_key=True)

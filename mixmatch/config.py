@@ -21,6 +21,10 @@ LOG = log.getLogger('root')
 
 CONF = cfg.CONF
 
+
+def get_conf_for_sp(sp_id):
+    CONF.__getattr__('sp_%s' % sp_id)
+
 # Proxy
 proxy_group = cfg.OptGroup(name='proxy',
                            title='Proxy Config Group')
@@ -105,10 +109,27 @@ if conf_files is not []:
                                     title=service_provider)
             sp_opts = [
                 cfg.StrOpt('sp_name',
-                           default="LOCAL",
+                           default="default",
                            help='Name of SP in Keystone Catalog.  Omit for local.'),
+
                 cfg.StrOpt('messagebus',
                            help='URI to connect to message bus'),
+
+                cfg.StrOpt('services',
+                           default=None,
+                           help='Enabled services for this service provider.'),
+
+                cfg.StrOpt('auth_url',
+                           default=None,
+                           help='Keystone AUTH URL for Service Provider'),
+
+                cfg.StrOpt('image_endpoint',
+                           default=None,
+                           help="Image Endpoint for Service Provider"),
+
+                cfg.StrOpt('volume_endpoint',
+                           default=None,
+                           help="Volume Endpoint for Service Provider")
             ]
 
             CONF.register_group(sp_group)
