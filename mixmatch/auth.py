@@ -63,4 +63,4 @@ def get_sp_auth(service_provider, user_token, remote_project_id=None):
         project_domain_id=project_domain_id
     )
 
-    return session.Session(auth=local_auth)
+    return session.Session(auth=remote_auth)

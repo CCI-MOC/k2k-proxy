@@ -137,7 +137,6 @@ class Request:
                                                 remote_project_id)
 
             headers['X-AUTH-TOKEN'] = auth_session.get_token()
-            project_id = auth_session.get_project_id()
 
             remote_url = services.construct_url(
                 sp,
