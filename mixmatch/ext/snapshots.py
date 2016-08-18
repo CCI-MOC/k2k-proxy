@@ -28,4 +28,4 @@ class SnapshotAggregator(base.BaseExtension):
             if type(snapshots) == dict:
                 snapshot_list += snapshots["snapshots"]
 
-        return json.dumps({ "snapshots": snapshot_list})
+        return json.dumps({"snapshots": snapshot_list})

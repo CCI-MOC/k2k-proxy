@@ -28,4 +28,4 @@ class ImageAggregator(base.BaseExtension):
             if type(images) == dict:
                 image_list += images["images"]
 
-        return json.dumps({ "images": image_list})
+        return json.dumps({"images": image_list})

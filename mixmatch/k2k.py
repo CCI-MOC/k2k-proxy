@@ -19,14 +19,16 @@ from keystoneclient import v3
 from mixmatch.config import CONF
 from mixmatch import model
 
+
 def get_sp_auth(service_provider, user_token, service, remote_project_id=None):
 
-    idp_auth = identity.Password(auth_url=CONF.keystone.auth_url,
-                                 username=CONF.keystone.username,
-                                 password=CONF.keystone.password,
-			         project_name=CONF.keystone.project_name,
-			         project_domain_id=CONF.keystone.project_domain_id,
-			         user_domain_id=CONF.keystone.user_domain_id)
+    idp_auth = identity.Password(
+            auth_url=CONF.keystone.auth_url,
+            username=CONF.keystone.username,
+            password=CONF.keystone.password,
+            project_name=CONF.keystone.project_name,
+            project_domain_id=CONF.keystone.project_domain_id,
+            user_domain_id=CONF.keystone.user_domain_id)
     local_session = session.Session(auth=idp_auth)
     client = v3.client.Client(session=local_session)
     token = v3.tokens.TokenManager(client)
