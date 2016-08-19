@@ -62,4 +62,5 @@ def delete(entity):
         session.delete(entity)
 
 
-BASE.metadata.create_all(enginefacade.get_legacy_facade().get_engine())
+def create_tables():
+    BASE.metadata.create_all(enginefacade.get_legacy_facade().get_engine())
