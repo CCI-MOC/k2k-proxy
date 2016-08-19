@@ -14,20 +14,5 @@
 
 import flask
 
-from mixmatch import config
-
-from mixmatch.ext.base import BaseExtension
-from mixmatch.ext.volumes import VolumeAggregator
-from mixmatch.ext.images import ImageAggregator
-from mixmatch.ext.snapshots import SnapshotAggregator
-
-CONF = config.CONF
-
 app = flask.Flask(__name__)
 request = flask.request
-
-extensions = dict()
-extensions['default'] = BaseExtension()
-extensions['volumes'] = VolumeAggregator()
-extensions['images'] = ImageAggregator()
-extensions['snapshots'] = SnapshotAggregator()

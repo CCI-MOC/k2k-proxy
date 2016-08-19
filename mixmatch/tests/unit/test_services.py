@@ -12,11 +12,12 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from testtools import testcase
 
-class BaseExtension:
-    def __init__(self):
-        self.aggregator = False
 
-    def aggregate(self, response):
-        for i, j in response.iteritems():
-            return j
+class TestNothing(testcase.TestCase):
+    def setUp(self):
+        super(TestNothing, self).setUp()
+
+    def test_construct_url(self):
+        self.assertEqual(1, 1)

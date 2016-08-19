@@ -12,16 +12,15 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import os
-
 import requests
 import flask
 
 from mixmatch.config import LOG, CONF
-from mixmatch.session import app, extensions
+from mixmatch.session import app
 from mixmatch.session import request
-from mixmatch import k2k
+from mixmatch import auth
 from mixmatch import model
+from mixmatch import services
 
 GLANCE_APIS = ['images', 'schemas', 'metadefs', 'tasks']
 
@@ -30,7 +29,7 @@ def stream_response(response):
     yield response.raw.read()
 
 
-class Request:
+class RequestHandler:
     def __init__(self, method, path, headers):
         self.method = method
         self.headers = headers
@@ -83,10 +82,6 @@ class Request:
         self.local_token = headers['X-AUTH-TOKEN']
         LOG.info('Local Token: %s ' % self.local_token)
 
-        extension_uri = os.path.join(*self.action)
-        self.extension = extensions['default']
-        if extension_uri in extensions:
-            self.extension = extensions[extension_uri]
         if 'MM-SERVICE-PROVIDER' in headers:
             # The user wants a specific service provider, use that SP.
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
@@ -121,43 +116,26 @@ class Request:
             headers = dict()
             headers["Accept"] = "application/json"
             headers["Content-Type"] = "application/json"
+
             if sp == 'default':
-                headers['X-AUTH-TOKEN'] = self.local_token
-
-                if self.service_type == 'image':
-                    remote_url = "%(endpoint)s/%(version)s/%(action)s" % {
-                        'endpoint': CONF.proxy.image_endpoint,
-                        'version': self.version,
-                        'action': os.path.join(*self.action)
-                    }
-
-                elif self.service_type in ['volume', 'volumev2']:
-                    remote_url = (
-                        "%(endpoint)s/%(version)s/%(project)s/%(action)s" % {
-                            'endpoint': CONF.proxy.volume_endpoint,
-                            'version': self.version,
-                            'project': self.local_project,
-                            'action': os.path.join(*self.action)
-                        }
-                    )
+                auth_session = auth.get_local_auth(self.local_token)
             else:
                 remote_project_id = None
                 if self.mapping:
                     remote_project_id = self.mapping.tenant_id
-                auth = k2k.get_sp_auth(sp,
-                                       self.local_token,
-                                       self.service_type,
-                                       remote_project_id)
-                headers['X-AUTH-TOKEN'] = auth.remote_token
+                auth_session = auth.get_sp_auth(sp,
+                                                self.local_token,
+                                                remote_project_id)
 
-                # The glance endpoint from the service catalog is missing
-                # the API version.
-                endpoint_url = auth.endpoint_url
-                if self.service_type == 'image':
-                    endpoint_url += '/' + self.version
+            headers['X-AUTH-TOKEN'] = auth_session.get_token()
 
-                remote_url = os.path.join(endpoint_url,
-                                          os.path.join(*self.action))
+            remote_url = services.construct_url(
+                sp,
+                self.service_type,
+                self.version,
+                self.action,
+                project_id=auth_session.get_project_id()
+            )
 
             # Send the request to the SP
             response = self._request(remote_url, headers)
@@ -173,12 +151,8 @@ class Request:
         # If the request is for listing images or volumes
         # Merge the responses from all service providers into one response.
         if self.aggregate:
-            if self.action[0] in extensions:
-                text = extensions[self.action[0]].aggregate(responses)
-            else:
-                text = extensions['default'].aggregate(responses)
             return flask.Response(
-                text,
+                services.aggregate(responses, self.action[0]),
                 200,
                 content_type=response.headers['content-type']
             )
@@ -210,7 +184,7 @@ class Request:
 @app.route('/<path:path>', methods=['GET', 'POST', 'PUT',
                                     'DELETE', 'HEAD', 'PATCH'])
 def proxy(path):
-    k2k_request = Request(request.method, path, request.headers)
+    k2k_request = RequestHandler(request.method, path, request.headers)
     return k2k_request.forward()
 
 
