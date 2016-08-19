@@ -163,7 +163,7 @@ class RequestHandler:
                 response.text,
                 response.status_code
             )
-            for key, value in response.headers.iteritems():
+            for key, value in response.headers.items():
                 final_response.headers[key] = value
         else:
             final_response = flask.Response(
