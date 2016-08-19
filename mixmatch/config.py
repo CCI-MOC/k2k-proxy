@@ -60,7 +60,7 @@ proxy_opts = [
 # Oslo.Cache
 cache.configure(CONF)
 token_cache_region = cache.create_region()
-cache.configure_cache_region(token_cache_region)
+cache.configure_cache_region(CONF, token_cache_region)
 MEMOIZE_TOKEN = cache.get_memoization_decorator(CONF,
     token_cache_region, "proxy")
 
