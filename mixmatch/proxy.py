@@ -15,6 +15,7 @@
 import requests
 import flask
 
+from mixmatch import config
 from mixmatch.config import LOG, CONF
 from mixmatch.session import app
 from mixmatch.session import request
@@ -139,7 +140,7 @@ class RequestHandler:
 
             # Send the request to the SP
             response = self._request(remote_url, headers)
-            responses[sp] = response
+            responses[sp] = response.text
 
             LOG.info("Remote URL: %s, Status: %s, Data: %s" %
                      (remote_url, response.status_code, str(request.data)))
@@ -189,6 +190,10 @@ def proxy(path):
 
 
 def main():
+    config.load_config()
+    config.more_config()
+    model.create_tables()
+
     app.run(port=5001, threaded=True)
 
 if __name__ == "__main__":

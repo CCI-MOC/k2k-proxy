@@ -12,14 +12,14 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from mixmatch.config import CONF, LOG
-
-from mixmatch.model import insert, delete, ResourceMapping
-
 import oslo_messaging
 
-import eventlet
+from mixmatch import config
+from mixmatch.config import CONF, LOG
+from mixmatch import model
+from mixmatch.model import insert, delete, ResourceMapping
 
+import eventlet
 eventlet.monkey_patch()
 
 
@@ -123,7 +123,7 @@ class ImageDeleteEndpoint(object):
 
 
 def get_server_for_sp(sp):
-    cfg = CONF.__getattr__('sp_%s' % sp)
+    cfg = config.get_conf_for_sp(sp)
     endpoints = [
             VolumeCreateEndpoint(cfg.sp_name),
             VolumeDeleteEndpoint(cfg.sp_name),
@@ -142,6 +142,10 @@ def get_server_for_sp(sp):
 
 
 if __name__ == "__main__":
+    config.load_config()
+    config.more_config()
+    model.create_tables()
+
     LOG.info("Now listening for changes")
     for sp in CONF.proxy.service_providers:
         get_server_for_sp(sp).start()

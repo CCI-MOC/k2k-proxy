@@ -23,9 +23,6 @@ LOG = log.getLogger('root')
 CONF = cfg.CONF
 
 
-def get_conf_for_sp(sp_id):
-    return CONF.__getattr__('sp_%s' % sp_id)
-
 # Proxy
 proxy_group = cfg.OptGroup(name='proxy',
                            title='Proxy Config Group')
@@ -101,23 +98,27 @@ CONF.register_opts(keystone_opts, keystone_group)
 # Logging
 log.register_options(CONF)
 
+# Caching
 cache.configure(CONF)
 
-
-conf_files = [f for f in ['k2k-proxy.conf',
-                          'etc/k2k-proxy.conf',
-                          '/etc/k2k-proxy.conf'] if path.isfile(f)]
-
-if conf_files is not []:
-    CONF(default_config_files=conf_files)
-
-# Caching
+MEMOIZE_SESSION = None
 session_cache_region = cache.create_region()
-cache.configure_cache_region(CONF, session_cache_region)
+
 MEMOIZE_SESSION = cache.get_memoization_decorator(
     CONF, session_cache_region, group="proxy")
 
-if CONF.proxy.service_providers:
+
+def load_config():
+    conf_files = [f for f in ['k2k-proxy.conf',
+                              'etc/k2k-proxy.conf',
+                              '/etc/k2k-proxy.conf'] if path.isfile(f)]
+    if conf_files is not []:
+        CONF(default_config_files=conf_files)
+
+
+def more_config():
+    cache.configure_cache_region(CONF, session_cache_region)
+
     for service_provider in CONF.proxy.service_providers:
 
         sp_group = cfg.OptGroup(name='sp_%s' % service_provider,
@@ -150,4 +151,8 @@ if CONF.proxy.service_providers:
         CONF.register_group(sp_group)
         CONF.register_opts(sp_opts, sp_group)
 
-log.setup(CONF, 'demo')
+    log.setup(CONF, 'demo')
+
+
+def get_conf_for_sp(sp_id):
+    return CONF.__getattr__('sp_%s' % sp_id)
