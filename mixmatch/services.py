@@ -13,18 +13,32 @@
 #   under the License.
 
 import json
+import os
 
-from mixmatch.services import image
-from mixmatch.services import volume
+from mixmatch import config
 
 
 def construct_url(service_provider, service_type,
                   version, action, project_id=None):
+    conf = config.get_conf_for_sp(service_provider)
+
     if service_type == 'image':
-        return image.construct_url(service_provider, version, action)
+        endpoint = conf.image_endpoint
+
+        return "%(endpoint)s/%(version)s/%(action)s" % {
+            'endpoint': endpoint,
+            'version': version,
+            'action': os.path.join(*action)
+        }
     elif service_type in ['volume', 'volumev2']:
-        return volume.construct_url(service_provider, version, action,
-                                    project_id=project_id)
+        endpoint = conf.volume_endpoint
+
+        return "%(endpoint)s/%(version)s/%(project)s/%(action)s" % {
+            'endpoint': endpoint,
+            'version': version,
+            'project': project_id,
+            'action': os.path.join(*action)
+        }
 
 
 def aggregate(responses, key):
