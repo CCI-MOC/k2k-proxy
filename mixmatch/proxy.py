@@ -31,7 +31,7 @@ def stream_response(response):
     yield response.raw.read()
 
 
-class Request:
+class RequestHandler:
     def __init__(self, method, path, headers):
         self.method = method
         self.headers = headers
@@ -86,9 +86,9 @@ class Request:
 
         extension_uri = os.path.join(*self.action)
         self.extension = extensions['default']
-        if extensions.has_key(extension_uri):
+        if extension_uri in extensions:
             self.extension = extensions[extension_uri]
-        if headers.has_key('MM-SERVICE-PROVIDER'):
+        if 'MM-SERVICE-PROVIDER' in headers:
             # The user wants a specific service provider, use that SP.
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
         else:
@@ -104,7 +104,8 @@ class Request:
                         self.service_providers = CONF.proxy.service_providers
                     else:
                         # Searching is not enabled, just ask local.
-                        self.service_providers = CONF.proxy.service_providers[:1]
+                        self.service_providers = \
+                                CONF.proxy.service_providers[:1]
             else:
                 # We're not looking for a specific Resource.
                 if CONF.proxy.aggregation and self.aggregate:
@@ -116,9 +117,7 @@ class Request:
 
     def forward(self):
         responses = dict()
-        status = None
         for sp in self.service_providers:
-            print ("Querying: %s" % sp)
             # Prepare header
             headers = dict()
             headers["Accept"] = "application/json"
@@ -126,7 +125,6 @@ class Request:
 
             if sp == 'default':
                 auth_session = auth.get_local_auth(self.local_token)
-
             else:
                 remote_project_id = None
                 if self.mapping:
@@ -159,7 +157,7 @@ class Request:
         # If the request is for listing images or volumes
         # Merge the responses from all service providers into one response.
         if self.aggregate:
-            if extensions.has_key(self.action[0]):
+            if self.action[0] in extensions:
                 text = extensions[self.action[0]].aggregate(responses)
             else:
                 text = extensions['default'].aggregate(responses)
@@ -191,12 +189,12 @@ class Request:
                                 stream=self.stream)
 
 
-@app.route('/', defaults={'path': ''}, methods=['GET','POST', 'PUT',
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',
                                                 'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:path>', methods=['GET', 'POST', 'PUT',
                                     'DELETE', 'HEAD', 'PATCH'])
 def proxy(path):
-    k2k_request = Request(request.method, path, request.headers)
+    k2k_request = RequestHandler(request.method, path, request.headers)
     return k2k_request.forward()
 
 

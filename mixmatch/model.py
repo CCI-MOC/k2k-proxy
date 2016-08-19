@@ -15,8 +15,6 @@
 import sqlalchemy as sql
 from sqlalchemy.ext.declarative import declarative_base
 
-from mixmatch.config import CONF
-
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import models
 

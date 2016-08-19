@@ -14,3 +14,4 @@ oslosphinx
 # Testing 
 os-testr
 testtools
+flake8
