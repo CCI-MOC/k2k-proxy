@@ -125,7 +125,7 @@ if CONF.proxy.service_providers:
         sp_opts = [
             cfg.StrOpt('sp_name',
                        default="default",
-                       help='Name of SP in Keystone Catalog.  Omit for local.'),
+                       help='SP ID in Keystone Catalog. Omit for local.'),
 
             cfg.StrOpt('messagebus',
                        help='URI to connect to message bus'),
