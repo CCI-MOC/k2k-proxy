@@ -16,10 +16,13 @@ from keystoneauth1 import identity
 from keystoneauth1 import session
 from keystoneclient import v3
 
-from mixmatch.config import CONF
+from mixmatch import config
+from mixmatch.config import LOG, CONF
 
 
+@config.MEMOIZE_SESSION
 def get_client():
+    LOG.info("Getting Admin Client")
     service_auth = identity.Password(
         auth_url=CONF.keystone.auth_url,
         username=CONF.keystone.username,
@@ -32,7 +35,9 @@ def get_client():
     return v3.client.Client(session=local_session)
 
 
+@config.MEMOIZE_SESSION
 def get_local_auth(user_token):
+    LOG.info("Getting session for %s" % user_token)
     client = get_client()
     token = v3.tokens.TokenManager(client)
     token_data = token.validate(token=user_token, include_catalog=False)
@@ -45,8 +50,13 @@ def get_local_auth(user_token):
     return session.Session(auth=local_auth)
 
 
+@config.MEMOIZE_SESSION
 def get_sp_auth(service_provider, user_token, remote_project_id=None):
     local_auth = get_local_auth(user_token).auth
+
+    LOG.info("Getting session for (%s, %s, %s)" % (service_provider,
+                                                   user_token,
+                                                   remote_project_id))
 
     if remote_project_id is None:
         project_name = 'admin'

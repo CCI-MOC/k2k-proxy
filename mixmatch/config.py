@@ -53,20 +53,13 @@ proxy_opts = [
                 help='Enable Aggregation when listing resources.'),
 
     cfg.BoolOpt('caching',
-                default=False,
+                default=True,
                 help='Enable token caching using oslo.cache'),
 
     cfg.IntOpt('cache_time',
                default=600,
                help='How long to store cached tokens for')
 ]
-
-# Oslo.Cache
-cache.configure(CONF)
-token_cache_region = cache.create_region()
-cache.configure_cache_region(CONF, token_cache_region)
-MEMOIZE_TOKEN = cache.get_memoization_decorator(
-    CONF, token_cache_region, "proxy")
 
 # Keystone
 keystone_group = cfg.OptGroup(name='keystone',
@@ -105,7 +98,11 @@ CONF.register_opts(proxy_opts, proxy_group)
 CONF.register_group(keystone_group)
 CONF.register_opts(keystone_opts, keystone_group)
 
+# Logging
 log.register_options(CONF)
+
+cache.configure(CONF)
+
 
 conf_files = [f for f in ['k2k-proxy.conf',
                           'etc/k2k-proxy.conf',
@@ -114,37 +111,43 @@ conf_files = [f for f in ['k2k-proxy.conf',
 if conf_files is not []:
     CONF(default_config_files=conf_files)
 
-    if CONF.proxy.service_providers:
-        for service_provider in CONF.proxy.service_providers:
+# Caching
+session_cache_region = cache.create_region()
+cache.configure_cache_region(CONF, session_cache_region)
+MEMOIZE_SESSION = cache.get_memoization_decorator(
+    CONF, session_cache_region, group="proxy")
 
-            sp_group = cfg.OptGroup(name='sp_%s' % service_provider,
-                                    title=service_provider)
-            sp_opts = [
-                cfg.StrOpt('sp_name',
-                           default="default",
-                           help='Name of SP in Keystone Catalog.  Omit for local.'),
+if CONF.proxy.service_providers:
+    for service_provider in CONF.proxy.service_providers:
 
-                cfg.StrOpt('messagebus',
-                           help='URI to connect to message bus'),
+        sp_group = cfg.OptGroup(name='sp_%s' % service_provider,
+                                title=service_provider)
+        sp_opts = [
+            cfg.StrOpt('sp_name',
+                       default="default",
+                       help='Name of SP in Keystone Catalog.  Omit for local.'),
 
-                cfg.StrOpt('services',
-                           default=None,
-                           help='Enabled services for this service provider.'),
+            cfg.StrOpt('messagebus',
+                       help='URI to connect to message bus'),
 
-                cfg.StrOpt('auth_url',
-                           default=None,
-                           help='Keystone AUTH URL for Service Provider'),
+            cfg.StrOpt('services',
+                       default=None,
+                       help='Enabled services for this service provider.'),
 
-                cfg.StrOpt('image_endpoint',
-                           default=None,
-                           help="Image Endpoint for Service Provider"),
+            cfg.StrOpt('auth_url',
+                       default=None,
+                       help='Keystone AUTH URL for Service Provider'),
 
-                cfg.StrOpt('volume_endpoint',
-                           default=None,
-                           help="Volume Endpoint for Service Provider")
-            ]
+            cfg.StrOpt('image_endpoint',
+                       default=None,
+                       help="Image Endpoint for Service Provider"),
 
-            CONF.register_group(sp_group)
-            CONF.register_opts(sp_opts, sp_group)
+            cfg.StrOpt('volume_endpoint',
+                       default=None,
+                       help="Volume Endpoint for Service Provider")
+        ]
+
+        CONF.register_group(sp_group)
+        CONF.register_opts(sp_opts, sp_group)
 
 log.setup(CONF, 'demo')
