@@ -32,8 +32,8 @@ proxy_opts = [
                help='Web Server Port'),
 
     cfg.ListOpt('service_providers',
-               default=None,
-               help='List of service providers'),
+                default=None,
+                help='List of service providers'),
 
     cfg.StrOpt('volume_endpoint',
                help='Local Volume Endpoint'),
@@ -53,16 +53,16 @@ proxy_opts = [
                 help='Enable token caching using oslo.cache'),
 
     cfg.IntOpt('cache_time',
-                default=600,
-                help='How long to store cached tokens for')
+               default=600,
+               help='How long to store cached tokens for')
 ]
 
 # Oslo.Cache
 cache.configure(CONF)
 token_cache_region = cache.create_region()
 cache.configure_cache_region(CONF, token_cache_region)
-MEMOIZE_TOKEN = cache.get_memoization_decorator(CONF,
-    token_cache_region, "proxy")
+MEMOIZE_TOKEN = cache.get_memoization_decorator(
+    CONF, token_cache_region, "proxy")
 
 # Keystone
 keystone_group = cfg.OptGroup(name='keystone',
@@ -118,7 +118,7 @@ if conf_files is not []:
             sp_opts = [
                 cfg.StrOpt('sp_name',
                            default="LOCAL",
-                           help='Name of SP in Keystone Catalog.  Omit for local.'),
+                           help='Name of SP in Keystone Catalog.'),
                 cfg.StrOpt('messagebus',
                            help='URI to connect to message bus'),
             ]

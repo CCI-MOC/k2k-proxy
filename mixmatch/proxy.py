@@ -85,9 +85,9 @@ class Request:
 
         extension_uri = os.path.join(*self.action)
         self.extension = extensions['default']
-        if extensions.has_key(extension_uri):
+        if extension_uri in extensions:
             self.extension = extensions[extension_uri]
-        if headers.has_key('MM-SERVICE-PROVIDER'):
+        if 'MM-SERVICE-PROVIDER' in headers:
             # The user wants a specific service provider, use that SP.
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
         else:
@@ -103,7 +103,8 @@ class Request:
                         self.service_providers = CONF.proxy.service_providers
                     else:
                         # Searching is not enabled, just ask local.
-                        self.service_providers = CONF.proxy.service_providers[:1]
+                        self.service_providers = \
+                                CONF.proxy.service_providers[:1]
             else:
                 # We're not looking for a specific Resource.
                 if CONF.proxy.aggregation and self.aggregate:
@@ -115,9 +116,7 @@ class Request:
 
     def forward(self):
         responses = dict()
-        status = None
         for sp in self.service_providers:
-            print ("Querying: %s" % sp)
             # Prepare header
             headers = dict()
             headers["Accept"] = "application/json"
@@ -127,19 +126,20 @@ class Request:
 
                 if self.service_type == 'image':
                     remote_url = "%(endpoint)s/%(version)s/%(action)s" % {
-                                    'endpoint': CONF.proxy.image_endpoint,
-                                    'version': self.version,
-                                    'action': os.path.join(*self.action)
+                        'endpoint': CONF.proxy.image_endpoint,
+                        'version': self.version,
+                        'action': os.path.join(*self.action)
                     }
 
                 elif self.service_type in ['volume', 'volumev2']:
-                    remote_url = "%(endpoint)s/%(version)s/" \
-                                 "%(project)s/%(action)s" % {
-                                     'endpoint': CONF.proxy.volume_endpoint,
-                                     'version': self.version,
-                                     'project': self.local_project,
-                                     'action': os.path.join(*self.action)
-                    }
+                    remote_url = (
+                        "%(endpoint)s/%(version)s/%(project)s/%(action)s" % {
+                            'endpoint': CONF.proxy.volume_endpoint,
+                            'version': self.version,
+                            'project': self.local_project,
+                            'action': os.path.join(*self.action)
+                        }
+                    )
             else:
                 remote_project_id = None
                 if self.mapping:
@@ -173,7 +173,7 @@ class Request:
         # If the request is for listing images or volumes
         # Merge the responses from all service providers into one response.
         if self.aggregate:
-            if extensions.has_key(self.action[0]):
+            if self.action[0] in extensions:
                 text = extensions[self.action[0]].aggregate(responses)
             else:
                 text = extensions['default'].aggregate(responses)
@@ -205,7 +205,7 @@ class Request:
                                 stream=self.stream)
 
 
-@app.route('/', defaults={'path': ''}, methods=['GET','POST', 'PUT',
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',
                                                 'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:path>', methods=['GET', 'POST', 'PUT',
                                     'DELETE', 'HEAD', 'PATCH'])

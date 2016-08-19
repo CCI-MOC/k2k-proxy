@@ -28,4 +28,4 @@ class VolumeAggregator(base.BaseExtension):
             if type(volumes) == dict:
                 volume_list += volumes["volumes"]
 
-        return json.dumps({ "volumes": volume_list})
+        return json.dumps({"volumes": volume_list})
