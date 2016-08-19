@@ -12,13 +12,11 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import os
-
 import requests
 import flask
 
 from mixmatch.config import LOG, CONF
-from mixmatch.session import app, extensions
+from mixmatch.session import app
 from mixmatch.session import request
 from mixmatch import auth
 from mixmatch import model
@@ -84,10 +82,6 @@ class RequestHandler:
         self.local_token = headers['X-AUTH-TOKEN']
         LOG.info('Local Token: %s ' % self.local_token)
 
-        extension_uri = os.path.join(*self.action)
-        self.extension = extensions['default']
-        if extension_uri in extensions:
-            self.extension = extensions[extension_uri]
         if 'MM-SERVICE-PROVIDER' in headers:
             # The user wants a specific service provider, use that SP.
             self.service_providers = [headers['MM-SERVICE-PROVIDER']]
@@ -157,12 +151,8 @@ class RequestHandler:
         # If the request is for listing images or volumes
         # Merge the responses from all service providers into one response.
         if self.aggregate:
-            if self.action[0] in extensions:
-                text = extensions[self.action[0]].aggregate(responses)
-            else:
-                text = extensions['default'].aggregate(responses)
             return flask.Response(
-                text,
+                services.aggregate(responses, self.action[0]),
                 200,
                 content_type=response.headers['content-type']
             )

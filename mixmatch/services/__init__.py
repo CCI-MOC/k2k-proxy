@@ -12,6 +12,8 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import json
+
 from mixmatch.services import image
 from mixmatch.services import volume
 
@@ -23,3 +25,13 @@ def construct_url(service_provider, service_type,
     elif service_type in ['volume', 'volumev2']:
         return volume.construct_url(service_provider, version, action,
                                     project_id=project_id)
+
+
+def aggregate(responses, key):
+    resource_list = []
+    for sp, response in responses.iteritems():
+        resources = json.loads(response.text)
+        if type(resources) == dict:
+            resource_list += resources[key]
+
+    return json.dumps({key: resource_list})

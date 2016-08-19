@@ -25,9 +25,3 @@ CONF = config.CONF
 
 app = flask.Flask(__name__)
 request = flask.request
-
-extensions = dict()
-extensions['default'] = BaseExtension()
-extensions['volumes'] = VolumeAggregator()
-extensions['images'] = ImageAggregator()
-extensions['snapshots'] = SnapshotAggregator()
