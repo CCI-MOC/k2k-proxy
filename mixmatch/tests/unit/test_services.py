@@ -20,6 +20,11 @@ from mixmatch import services
 from mixmatch.tests.unit import samples
 
 
+class Response:
+    def __init__(self, text):
+        self.text = text
+
+
 class TestServices(testcase.TestCase):
     def setUp(self):
         super(TestServices, self).setUp()
@@ -27,16 +32,16 @@ class TestServices(testcase.TestCase):
     def test_aggregate(self):
         # Aggregate Image
         image_lists = {
-            'default': json.dumps(samples.IMAGE_LIST_V2),
-            'sp1': json.dumps(samples.IMAGE_LIST_V2)
+            'default': Response(json.dumps(samples.IMAGE_LIST_V2)),
+            'sp1': Response(json.dumps(samples.IMAGE_LIST_V2))
         }
         response = json.loads(services.aggregate(image_lists, 'images'))
         self.assertEqual(6, len(response['images']))
 
         # Aggregate Volumes
         volume_lists = {
-            'default': json.dumps(samples.VOLUME_LIST_V2),
-            'sp1': json.dumps(samples.VOLUME_LIST_V2)
+            'default': Response(json.dumps(samples.VOLUME_LIST_V2)),
+            'sp1': Response(json.dumps(samples.VOLUME_LIST_V2))
         }
         response = json.loads(services.aggregate(volume_lists, 'volumes'))
         self.assertEqual(2, len(response['volumes']))
