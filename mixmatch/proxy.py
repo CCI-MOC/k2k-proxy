@@ -12,6 +12,8 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import uuid
+
 import requests
 import flask
 
@@ -23,11 +25,17 @@ from mixmatch import auth
 from mixmatch import model
 from mixmatch import services
 
-GLANCE_APIS = ['images', 'schemas', 'metadefs', 'tasks']
-
 
 def stream_response(response):
     yield response.raw.read()
+
+
+def is_valid_uuid(value):
+    try:
+        uuid.UUID(value, version=4)
+        return True
+    except ValueError:
+        return False
 
 
 class RequestHandler:
@@ -35,50 +43,37 @@ class RequestHandler:
         self.method = method
         self.headers = headers
 
-        # Don't stream response by default
-        self.stream = False
-
         self.request_path = path.split('/')
-        self.version = self.request_path[0]
-        if self.request_path[1] in GLANCE_APIS:
-            # Image API calls look like
-            # /{version}/{action}
-            self.service_type = 'image'
-            self.local_project = None
-            self.action = self.request_path[1:]
-
-            # Downloading an image requires streaming!
-            # If Image API v1, always stream for now
-            # This is because the download call in v2 is /file
-            # but in v1 is just /images/<image_id> which is very
-            # hard to distinguish.
-            if 'file' in self.action:
-                self.stream = True
-            if self.version == 'v1' and self.method == 'GET' \
-                    and len(self.action) == 2:
-                self.stream = True
-        else:
-            # Volume API calls look like
-            # /{version}/{project_id}/{action}
-            self.local_project = self.request_path[1]
+        self.service_type = self.request_path[0]
+        self.version = self.request_path[1]
+        if self.service_type == 'image':
+            # /image/{version}/{action}
             self.action = self.request_path[2:]
-            if self.version == 'v1':
-                self.service_type = 'volume'
-            else:
-                self.service_type = 'volumev2'
+        elif self.service_type == 'volume':
+            # /volume/{version}/{project_id}/{action}
+            self.action = self.request_path[3:]
+        else:
+            raise ValueError
+
+        if self.method in ['GET', 'PUT']:
+            self.stream = True
+        else:
+            self.stream = False
 
         self.resource_id = None
         self.mapping = None
         self.aggregate = False
-        if len(self.action) > 1 and self.action[1] != "detail":
+
+        if len(self.action) > 1 and is_valid_uuid(self.action[1]):
             self.resource_id = self.action[1]
             self.mapping = model.ResourceMapping.find(
                 resource_type=self.action[0],
                 resource_id=self.resource_id.replace("-", ""))
         else:
-            if self.method == 'GET':
-                # We don't want to create stuff everywhere!
+            if self.method == 'GET' \
+                    and self.action[0] in ['images', 'volumes', 'snapshots']:
                 self.aggregate = True
+
         self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
         LOG.info('Local Token: %s ' % self.local_token)
@@ -140,7 +135,7 @@ class RequestHandler:
 
             # Send the request to the SP
             response = self._request(remote_url, headers)
-            responses[sp] = response.text
+            responses[sp] = response
 
             LOG.info("Remote URL: %s, Status: %s, Data: %s" %
                      (remote_url, response.status_code, str(request.data)))
@@ -168,6 +163,7 @@ class RequestHandler:
         else:
             final_response = flask.Response(
                 flask.stream_with_context(stream_response(response)),
+                response.status_code,
                 content_type=response.headers['content-type']
             )
         return final_response

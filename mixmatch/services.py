@@ -44,7 +44,7 @@ def construct_url(service_provider, service_type,
 def aggregate(responses, key):
     resource_list = []
     for sp, response in responses.items():
-        resources = json.loads(response)
+        resources = json.loads(response.text)
         if type(resources) == dict:
             resource_list += resources[key]
 
