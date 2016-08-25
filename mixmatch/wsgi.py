@@ -12,4 +12,8 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from mixmatch.proxy import app as application
+from mixmatch import proxy
+from mixmatch import session
+
+proxy.main()
+application = session.app

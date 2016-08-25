@@ -15,23 +15,27 @@ Install dependencies. ::
 
 Web Server
 ==========
-The proxy can then be run using the inbuilt web server with: ::
+The recommended way is to run the proxy using uWSGI through the
+``run_proxy.sh`` script. ::
 
-    $ python -m mixmatch.proxy
+    $ ./run_proxy.sh
 
 
-This is not recommended because it does not support Chunked Transfer
-Encoding which is required for uploading image files to glance.
+It is also possible to run the proxy with Apache2 and ``mod_wsgi``, but there
+are limitations compared to running it with uWSGI.
 
-The recommended way is to run the proxy using Apache2 and ``mod_wsgi``.
+- Image uploading with Glance doesn't work unless running Apache in embedded
+  mode.
+- Image API v1 uses underscores in the header keys, which are silently dropped
+  by Apache. Hacking the configuration to allow these through is required.
 
-For Ubuntu: ::
+To run the proxy with Apache in Ubuntu: ::
 
     $ apt-get install libapache2-mod-wsgi
-    $ cp httpd/apache-proxy.conf /etc/apache2/sites-available/proxy.conf
+    $ cp httpd/apache.conf /etc/apache2/sites-available/proxy.conf
     $ cp etc/k2k-proxy.conf /etc/
     $ a2ensite proxy
-    $ service apache2 restart
+    $ service apache2 reload
 
 
 Configuration
@@ -54,6 +58,7 @@ installation.  For instance::
     [sp_one]
     sp_name="keystone-sp1"
     messagebus="rabbit://rabbituser:rabbitpassword@192.168.7.20"
+
 
 Keystone Configuration
 ----------------------

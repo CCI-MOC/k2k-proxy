@@ -20,6 +20,7 @@ import flask
 from mixmatch import config
 from mixmatch.config import LOG, CONF
 from mixmatch.session import app
+from mixmatch.session import chunked_reader
 from mixmatch.session import request
 from mixmatch import auth
 from mixmatch import model
@@ -28,19 +29,6 @@ from mixmatch import services
 
 def stream_response(response):
     yield response.raw.read()
-
-
-def is_chunked():
-    return request.environ.get("mod_wsgi.input_chunked") == "1"
-
-
-def stream_chunked():
-    stream = request.environ["wsgi.input"]
-    try:
-        while True:
-            yield stream.next()
-    except:
-        pass
 
 
 def is_valid_uuid(value):
@@ -74,7 +62,7 @@ class RequestHandler:
         else:
             raise ValueError
 
-        if self.method in ['GET', 'PUT']:
+        if self.method in ['GET']:
             self.stream = True
         else:
             self.stream = False
@@ -126,20 +114,8 @@ class RequestHandler:
 
     def forward(self):
         responses = dict()
+        headers = self._prepare_headers(self.headers)
         for sp in self.service_providers:
-            # Prepare header
-            headers = dict()
-
-            try:
-                headers['Accept'] = self.headers['Accept']
-            except KeyError:
-                headers['Accept'] = 'application/json'
-
-            try:
-                headers['Content-Type'] = self.headers['Content-Type']
-            except KeyError:
-                headers['Content-Type'] = 'application/json'
-
             if sp == 'default':
                 auth_session = auth.get_local_auth(self.local_token)
             else:
@@ -196,10 +172,11 @@ class RequestHandler:
         return final_response
 
     def _request(self, url, headers):
-        if self.method == 'PUT' and is_chunked():
-            return requests.put(url=url,
-                                headers=headers,
-                                data=stream_chunked())
+        if self.chunked:
+            return requests.request(method=self.method,
+                                    url=url,
+                                    headers=headers,
+                                    data=chunked_reader())
         else:
             return requests.request(method=self.method,
                                     url=url,
@@ -207,6 +184,20 @@ class RequestHandler:
                                     data=request.data,
                                     stream=self.stream,
                                     params=request.args)
+
+    @staticmethod
+    def _prepare_headers(user_headers):
+        headers = dict()
+        headers['Accept'] = user_headers.get('Accept', '')
+        headers['Content-Type'] = user_headers.get('Content-Type', '')
+        for key, value in user_headers.items():
+            if key.lower().startswith('x-') and key.lower() != 'x-auth-token':
+                headers[key] = value
+        return headers
+
+    @property
+    def chunked(self):
+        return self.headers.get('Transfer-Encoding', '').lower() == 'chunked'
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',
