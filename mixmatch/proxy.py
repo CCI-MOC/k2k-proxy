@@ -57,6 +57,12 @@ class RequestHandler:
         self.headers = headers
 
         self.request_path = path.split('/')
+
+        # workaround to fix glance requests
+        # that does not contain image directory
+        if self.request_path[0] in ['v1', 'v2']:
+            self.request_path = ['image'] + self.request_path
+
         self.service_type = self.request_path[0]
         self.version = self.request_path[1]
         if self.service_type == 'image':
@@ -193,14 +199,14 @@ class RequestHandler:
         if self.method == 'PUT' and is_chunked():
             return requests.put(url=url,
                                 headers=headers,
-                                data=stream_chunked(),
-                                stream=True)
+                                data=stream_chunked())
         else:
             return requests.request(method=self.method,
                                     url=url,
                                     headers=headers,
                                     data=request.data,
-                                    stream=self.stream)
+                                    stream=self.stream,
+                                    params=request.args)
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',

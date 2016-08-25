@@ -9,9 +9,11 @@ oslo.log
 oslo.db
 python-keystoneclient
 requests
-oslosphinx
+six
 
 # Testing 
 os-testr
 testtools
 flake8
+mock
+requests_mock
