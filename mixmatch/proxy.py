@@ -30,6 +30,19 @@ def stream_response(response):
     yield response.raw.read()
 
 
+def is_chunked():
+    return request.environ.get("mod_wsgi.input_chunked") == "1"
+
+
+def stream_chunked():
+    stream = request.environ["wsgi.input"]
+    try:
+        while True:
+            yield stream.next()
+    except:
+        pass
+
+
 def is_valid_uuid(value):
     try:
         uuid.UUID(value, version=4)
@@ -110,8 +123,16 @@ class RequestHandler:
         for sp in self.service_providers:
             # Prepare header
             headers = dict()
-            headers["Accept"] = "application/json"
-            headers["Content-Type"] = "application/json"
+
+            try:
+                headers['Accept'] = self.headers['Accept']
+            except KeyError:
+                headers['Accept'] = 'application/json'
+
+            try:
+                headers['Content-Type'] = self.headers['Content-Type']
+            except KeyError:
+                headers['Content-Type'] = 'application/json'
 
             if sp == 'default':
                 auth_session = auth.get_local_auth(self.local_token)
@@ -137,8 +158,8 @@ class RequestHandler:
             response = self._request(remote_url, headers)
             responses[sp] = response
 
-            LOG.info("Remote URL: %s, Status: %s, Data: %s" %
-                     (remote_url, response.status_code, str(request.data)))
+            LOG.info("Remote URL: %s, Status: %s" %
+                     (remote_url, response.status_code))
 
             # If we're looking for a specific resource and we found it
             if 200 <= response.status_code < 300 and self.resource_id:
@@ -169,11 +190,17 @@ class RequestHandler:
         return final_response
 
     def _request(self, url, headers):
-        return requests.request(method=self.method,
-                                url=url,
+        if self.method == 'PUT' and is_chunked():
+            return requests.put(url=url,
                                 headers=headers,
-                                data=request.data,
-                                stream=self.stream)
+                                data=stream_chunked(),
+                                stream=True)
+        else:
+            return requests.request(method=self.method,
+                                    url=url,
+                                    headers=headers,
+                                    data=request.data,
+                                    stream=self.stream)
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',
@@ -190,7 +217,7 @@ def main():
     config.more_config()
     model.create_tables()
 
-    app.run(port=5001, threaded=True)
 
 if __name__ == "__main__":
     main()
+    app.run(port=5001, threaded=True)
