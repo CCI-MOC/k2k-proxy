@@ -2,13 +2,37 @@
 Installation
 ============
 
-Install dependencies. ::
-
-    $ pip install -r requirements.txt
-
 The proxy will be set up in one OpenStack installation, called the Identity
 Provider, or IdP, and it redirect API calls to either the local services, or
 remote services in one of several Service Provider installations (SP).
+
+Install dependencies. ::
+
+    $ pip install -r requirements.txt
+    $ python setup.py install
+
+
+
+Web Server
+==========
+The proxy can then be run using the inbuilt web server with: ::
+
+    $ python -m mixmatch.proxy
+
+
+This is not recommended because it does not support Chunked Transfer
+Encoding which is required for uploading image files to glance.
+
+The recommended way is to run the proxy using Apache2 and ``mod_wsgi``.
+
+For Ubuntu: ::
+
+    $ apt-get install libapache2-mod-wsgi
+    $ cp httpd/apache-proxy.conf /etc/apache2/sites-available/proxy.conf
+    $ cp etc/k2k-proxy.conf /etc/
+    $ a2ensite proxy
+    $ service apache2 restart
+
 
 Configuration
 =============
