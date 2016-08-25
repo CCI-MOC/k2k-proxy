@@ -15,7 +15,6 @@
 import six
 from testtools import testcase
 from requests_mock.contrib import fixture as requests_fixture
-from mock import patch
 from oslo_config import fixture as config_fixture
 import oslo_db
 import fixtures
@@ -38,15 +37,36 @@ class FakeSession():
         return self.project
 
 
+class SessionFixture(fixtures.Fixture):
+    """A fixture that mocks get_{sp,local}_session."""
+    def _setUp(self):
+        def get_local_auth(token):
+            return FakeSession(token, self.local_auths[token])
+
+        def get_sp_auth(sp, token, project):
+            return FakeSession(self.sp_auths[(sp, token, project)], project)
+
+        self.local_auths = {}
+        self.sp_auths = {}
+        self.useFixture(fixtures.MonkeyPatch(
+            'mixmatch.auth.get_sp_auth', get_sp_auth))
+        self.useFixture(fixtures.MonkeyPatch(
+            'mixmatch.auth.get_local_auth', get_local_auth))
+
+    def add_local_auth(self, token, project):
+        self.local_auths[token] = project
+
+    def add_sp_auth(self, sp, token, project, remote_token):
+        self.sp_auths[(sp, token, project)] = remote_token
+
+
 class DatabaseFixture(fixtures.Fixture):
     """A fixture that performs each test in a new, blank database."""
     def __init__(self, conf):
         super(DatabaseFixture, self).__init__()
         oslo_db.options.set_defaults(conf, connection="sqlite://")
 
-    def setUp(self):
-        super(DatabaseFixture, self).setUp()
-        # create_tables()
+    def _setUp(self):
         context = enginefacade.transaction_context()
         with enginefacade.writer.using(context) as session:
             self.engine = session.get_bind()
@@ -62,50 +82,77 @@ class TestMock(testcase.TestCase):
         super(TestMock, self).setUp()
         self.requests_fixture = self.useFixture(requests_fixture.Fixture())
         self.config_fixture = self.useFixture(config_fixture.Config(conf=CONF))
+        self.session_fixture = self.useFixture(SessionFixture())
+        self.db_fixture = self.useFixture(DatabaseFixture(conf=CONF))
         self.app = app.test_client()
 
         # set config values
         self.config_fixture.load_raw_values(
             group='proxy',
-            service_providers='default')
+            service_providers='default, remote1')
         self.config_fixture.load_raw_values(
             group='sp_default',
             image_endpoint='http://images.local',
             volume_endpoint='http://volumes.local')
+        self.config_fixture.load_raw_values(
+            group='sp_remote1',
+            image_endpoint='http://images.remote1',
+            volume_endpoint='http://volumes.remote1')
         more_config()
 
-        # Database stuff
-        self.db_fixture = self.useFixture(DatabaseFixture(conf=CONF))
-
-        insert(ResourceMapping("volume", "24564325645", "1234234234", "Wefwe"))
-
-    @patch('mixmatch.auth.get_local_auth')
-    def test_download_image(self, get_local_auth):
-        # mock K2K functionality
-
-        def fake_get_local_auth(user_token):
-            return FakeSession(user_token, 'my_project_id')
-
-        get_local_auth.side_effect = fake_get_local_auth
-
-        # set up db
-
-        insert(ResourceMapping("image", "6c4ae06e14bd422e97afe07223c99e18",
-                               "default", "not-to-be-read"))
-
-        # mock requests responses
+    def test_download_image(self):
+        self.session_fixture.add_local_auth('wewef', 'my_project_id')
+        insert(ResourceMapping("images", "6c4ae06e14bd422e97afe07223c99e18",
+                               "not-to-be-read", "default"))
 
         EXPECTED = 'WEOFIHJREINJEFDOWEIJFWIENFERINWFKEWF'
         self.requests_fixture.get(
             'http://images.local/v2/images/'
             '6c4ae06e-14bd-422e-97af-e07223c99e18',
+            request_headers={'X-AUTH-TOKEN': 'wewef'},
             text=six.u(EXPECTED),
             headers={'CONTENT-TYPE': 'application/json'})
-
-        # do the API call
-
         response = self.app.get(
             '/image/v2/images/6c4ae06e-14bd-422e-97af-e07223c99e18',
-            headers={'X_AUTH_TOKEN': 'wewef',
+            headers={'X-AUTH-TOKEN': 'wewef',
                      'CONTENT-TYPE': 'application/json'})
         self.assertEqual(response.data, six.b(EXPECTED))
+
+    def test_download_image_remote(self):
+        REMOTE_PROJECT_ID = "319d8162b38342609f5fafe1404216b9"
+        LOCAL_TOKEN = "my-local-token"
+        REMOTE_TOKEN = "my-remote-token"
+
+        self.session_fixture.add_sp_auth('remote1', LOCAL_TOKEN,
+                                         REMOTE_PROJECT_ID, REMOTE_TOKEN)
+        insert(ResourceMapping("images", "6c4ae06e14bd422e97afe07223c99e18",
+                               REMOTE_PROJECT_ID, "remote1"))
+
+        EXPECTED = 'WEOFIHJREINJEFDOWEIJFWIENFERINWFKEWF'
+        self.requests_fixture.get(
+            'http://images.remote1/v2/images/'
+            '6c4ae06e-14bd-422e-97af-e07223c99e18',
+            text=six.u(EXPECTED),
+            request_headers={'X-AUTH-TOKEN': REMOTE_TOKEN},
+            headers={'CONTENT-TYPE': 'application/json'})
+        response = self.app.get(
+            '/image/v2/images/6c4ae06e-14bd-422e-97af-e07223c99e18',
+            headers={'X-AUTH-TOKEN': LOCAL_TOKEN,
+                     'CONTENT-TYPE': 'application/json'})
+        self.assertEqual(response.data, six.b(EXPECTED))
+
+    def test_download_image_unknown(self):
+        self.session_fixture.add_local_auth('wewef', 'my_project_id')
+
+        self.requests_fixture.get(
+            'http://images.local/v2/images/'
+            '6c4ae06e-14bd-422e-97af-e07223c99e18',
+            text="nope.",
+            status_code=400,
+            request_headers={'X-AUTH-TOKEN': 'wewef'},
+            headers={'CONTENT-TYPE': 'application/json'})
+        response = self.app.get(
+            '/image/v2/images/6c4ae06e-14bd-422e-97af-e07223c99e18',
+            headers={'X-AUTH-TOKEN': 'wewef',
+                     'CONTENT-TYPE': 'application/json'})
+        self.assertEqual(response.status_code, 400)
