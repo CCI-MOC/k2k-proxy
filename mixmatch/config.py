@@ -36,12 +36,6 @@ proxy_opts = [
                 default=[],
                 help='List of service providers'),
 
-    cfg.StrOpt('volume_endpoint',
-               help='Local Volume Endpoint'),
-
-    cfg.StrOpt('image_endpoint',
-               help='Local Image Endpoint'),
-
     cfg.BoolOpt('search_by_broadcast',
                 default=False,
                 help='Search All Service Providers on Unknown Resource ID'),

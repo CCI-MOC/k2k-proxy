@@ -35,7 +35,7 @@ class VolumeCreateEndpoint(object):
                  payload['volume_id'].replace("-", ""),
                  payload['tenant_id'].replace("-", ""),
                  self.sp_name))
-        insert(ResourceMapping("volume",
+        insert(ResourceMapping("volumes",
                payload['volume_id'].replace("-", ""),
                payload['tenant_id'].replace("-", ""),
                self.sp_name))
@@ -53,7 +53,7 @@ class VolumeDeleteEndpoint(object):
                  payload['volume_id'].replace("-", ""),
                  payload['tenant_id'].replace("-", ""),
                  self.sp_name))
-        delete(ResourceMapping.find("volume", payload['volume_id']))
+        delete(ResourceMapping.find("volumes", payload['volume_id']))
 
 
 class SnapshotCreateEndpoint(object):
@@ -68,7 +68,7 @@ class SnapshotCreateEndpoint(object):
                  payload['snapshot_id'].replace("-", ""),
                  payload['tenant_id'].replace("-", ""),
                  self.sp_name))
-        insert(ResourceMapping("snapshot",
+        insert(ResourceMapping("snapshots",
                payload['snapshot_id'].replace("-", ""),
                payload['tenant_id'].replace("-", ""),
                self.sp_name))
@@ -86,7 +86,7 @@ class SnapshotDeleteEndpoint(object):
                  payload['snapshot_id'].replace("-", ""),
                  payload['tenant_id'].replace("-", ""),
                  self.sp_name))
-        delete(ResourceMapping.find("snapshot", payload['snapshot_id']))
+        delete(ResourceMapping.find("snapshots", payload['snapshot_id']))
 
 
 class ImageCreateEndpoint(object):
@@ -101,7 +101,7 @@ class ImageCreateEndpoint(object):
                  payload['id'].replace("-", ""),
                  payload['owner'].replace("-", ""),
                  self.sp_name))
-        insert(ResourceMapping("image",
+        insert(ResourceMapping("images",
                payload['id'].replace("-", ""),
                payload['owner'].replace("-", ""),
                self.sp_name))
@@ -119,7 +119,7 @@ class ImageDeleteEndpoint(object):
                  payload['id'].replace("-", ""),
                  payload['owner'].replace("-", ""),
                  self.sp_name))
-        delete(ResourceMapping.find("image", payload['id']))
+        delete(ResourceMapping.find("images", payload['id']))
 
 
 def get_server_for_sp(sp):
