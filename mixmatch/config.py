@@ -33,7 +33,7 @@ proxy_opts = [
                help='Web Server Port'),
 
     cfg.ListOpt('service_providers',
-                default=None,
+                default=[],
                 help='List of service providers'),
 
     cfg.StrOpt('volume_endpoint',
@@ -43,6 +43,7 @@ proxy_opts = [
                help='Local Image Endpoint'),
 
     cfg.BoolOpt('search_by_broadcast',
+                default=False,
                 help='Search All Service Providers on Unknown Resource ID'),
 
     cfg.BoolOpt('aggregation',
