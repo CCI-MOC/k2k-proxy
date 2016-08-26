@@ -20,6 +20,7 @@ from mixmatch import config
 
 def construct_url(service_provider, service_type,
                   version, action, project_id=None):
+    """Construct the full URL for an Openstack API call."""
     conf = config.get_conf_for_sp(service_provider)
 
     if service_type == 'image':
@@ -42,6 +43,7 @@ def construct_url(service_provider, service_type,
 
 
 def aggregate(responses, key):
+    """Combine responses from several clusters into one response."""
     resource_list = []
     for sp, response in responses.items():
         resources = json.loads(response.text)

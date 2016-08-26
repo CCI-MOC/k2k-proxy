@@ -123,6 +123,10 @@ class ImageDeleteEndpoint(object):
 
 
 def get_server_for_sp(sp):
+    """Get notification listener for a particular service provider.
+
+    The server can be run in the background under eventlet using .start()
+    """
     cfg = config.get_conf_for_sp(sp)
     endpoints = [
             VolumeCreateEndpoint(cfg.sp_name),

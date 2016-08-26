@@ -22,6 +22,7 @@ from mixmatch.config import LOG, CONF
 
 @config.MEMOIZE_SESSION
 def get_client():
+    """Return a Keystone client capable of validating tokens."""
     LOG.info("Getting Admin Client")
     service_auth = identity.Password(
         auth_url=CONF.keystone.auth_url,
@@ -37,6 +38,7 @@ def get_client():
 
 @config.MEMOIZE_SESSION
 def get_local_auth(user_token):
+    """Return a Keystone session for the local cluster."""
     LOG.info("Getting session for %s" % user_token)
     client = get_client()
     token = v3.tokens.TokenManager(client)
@@ -52,6 +54,7 @@ def get_local_auth(user_token):
 
 @config.MEMOIZE_SESSION
 def get_sp_auth(service_provider, user_token, remote_project_id=None):
+    """Perform K2K auth, and return a session for a remote cluster."""
     local_auth = get_local_auth(user_token).auth
 
     LOG.info("Getting session for (%s, %s, %s)" % (service_provider,
