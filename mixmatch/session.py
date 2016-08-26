@@ -16,3 +16,25 @@ import flask
 
 app = flask.Flask(__name__)
 request = flask.request
+
+
+def chunked_reader():
+    try:
+        # If we're running under uWSGI, use the uwsgi.chunked_read method
+        # to read chunked input.
+        import uwsgi  # noqa
+
+        while True:
+            chunk = uwsgi.chunked_read()
+            if len(chunk) > 0:
+                yield chunk
+            else:
+                return
+    except ImportError:
+        # Otherwise try to read the wsgi input. This works in embedded Apache.
+        stream = flask.request.environ["wsgi.input"]
+        try:
+            while True:
+                yield stream.next()
+        except:
+            return

@@ -13,7 +13,6 @@ Contents:
 
    architecture
    installation
-   usage
 
 
 Indices and tables

@@ -10,6 +10,7 @@ oslo.db
 python-keystoneclient
 requests
 six
+uwsgi
 
 # Testing 
 os-testr
