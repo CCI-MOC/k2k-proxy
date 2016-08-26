@@ -23,6 +23,8 @@ BASE = declarative_base(cls=models.ModelBase)
 
 
 class ResourceMapping(BASE):
+    """The location of a particular resource."""
+
     __tablename__ = 'resource_mapping'
     id = sql.Column(sql.Integer, primary_key=True)
     resource_type = sql.Column(sql.String(60), nullable=False)

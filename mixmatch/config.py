@@ -104,6 +104,7 @@ MEMOIZE_SESSION = cache.get_memoization_decorator(
 
 
 def load_config():
+    """Load parameters from the proxy's config file."""
     conf_files = [f for f in ['k2k-proxy.conf',
                               'etc/k2k-proxy.conf',
                               '/etc/k2k-proxy.conf'] if path.isfile(f)]
@@ -112,6 +113,12 @@ def load_config():
 
 
 def more_config():
+    """Perform configuration that must be delayed until after import time.
+
+    This code must be delayed until the config files have been loaded.  They
+    are in a separate file so that unit tests can run them without loading
+    configuration from a file.
+    """
     cache.configure_cache_region(CONF, session_cache_region)
 
     for service_provider in CONF.proxy.service_providers:
@@ -150,4 +157,5 @@ def more_config():
 
 
 def get_conf_for_sp(sp_id):
+    """Get the configuration opject for a specifc service provider."""
     return CONF.__getattr__('sp_%s' % sp_id)
