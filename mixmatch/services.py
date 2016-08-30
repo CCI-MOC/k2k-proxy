@@ -14,6 +14,7 @@
 
 import json
 import os
+import operator
 
 from mixmatch import config
 
@@ -49,5 +50,10 @@ def aggregate(responses, key):
         resources = json.loads(response.text)
         if type(resources) == dict:
             resource_list += resources[key]
+
+    if key == 'images':
+        resource_list = sorted(resource_list,
+                               key=operator.itemgetter('size'),
+                               reverse=True)
 
     return json.dumps({key: resource_list})
