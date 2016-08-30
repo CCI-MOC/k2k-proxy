@@ -151,7 +151,7 @@ class RequestHandler:
         # Merge the responses from all service providers into one response.
         if self.aggregate:
             return flask.Response(
-                services.aggregate(responses, self.action[0]),
+                services.aggregate(responses, self.action[0], request.args),
                 200,
                 content_type=response.headers['content-type']
             )

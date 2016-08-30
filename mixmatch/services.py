@@ -43,17 +43,72 @@ def construct_url(service_provider, service_type,
         }
 
 
-def aggregate(responses, key):
+def aggregate(responses, key, params=None):
     """Combine responses from several clusters into one response."""
+    if params:
+        limit = params.get('limit', None)
+        sort = params.get('sort', None)
+        marker = params.get('marker', None)
+
+        sort_key = params.get('sort_key', None)
+        sort_dir = params.get('sort_dir', None)
+
+        if sort and not sort_key:
+            sort_key, sort_dir = sort.split(':')
+    else:
+        sort_key = None
+        limit = None
+        marker = None
+
     resource_list = []
     for sp, response in responses.items():
         resources = json.loads(response.text)
         if type(resources) == dict:
             resource_list += resources[key]
 
-    if key == 'images':
-        resource_list = sorted(resource_list,
-                               key=operator.itemgetter('size'),
-                               reverse=True)
+    start = 0
+    last = end = len(resource_list)
 
-    return json.dumps({key: resource_list})
+    if key == 'images':
+        # By default Glance sorts in descending size order
+        if not sort_key:
+            sort_key = 'size'
+            sort_dir = 'desc'
+
+    if sort_key:
+        resource_list = sorted(resource_list,
+                               key=operator.itemgetter(sort_key),
+                               reverse=_is_reverse(sort_dir))
+
+    if limit:
+        if marker:
+            # Find the position of the resource with marker id
+            # and set the list to start at the one after that.
+            for index, item in enumerate(resource_list):
+                if item['id'] == marker:
+                    start = index + 1
+                    break
+        end = start + limit
+
+    response = {key: resource_list[start:end]}
+
+    # Inject the pagination URIs
+    if start > 0:
+        # TODO - Actual URL
+        response['start'] = 'url'
+    if end < last:
+        # TODO - Actual URL
+        new_marker = response[key][-1]['id']
+        response['next'] = new_marker
+
+    return json.dumps(response)
+
+
+def _is_reverse(order):
+    """Return True if order is asc, False if order is desc"""
+    if order == 'asc':
+        return False
+    elif order == 'desc':
+        return True
+    else:
+        raise ValueError
