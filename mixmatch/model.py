@@ -39,6 +39,15 @@ class ResourceMapping(BASE):
     def __repr__(self):
         return str((self.resource_type, self.resource_id, self.resource_sp))
 
+    def __eq__(self, other):
+        return (self.resource_type == other.resource_type and
+                self.resource_id == other.resource_id and
+                self.resource_sp == other.resource_sp and
+                self.tenant_id == other.tenant_id)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @classmethod
     def find(cls, resource_type, resource_id):
         context = enginefacade.transaction_context()
