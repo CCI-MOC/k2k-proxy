@@ -122,26 +122,29 @@ class ImageDeleteEndpoint(object):
         delete(ResourceMapping.find("images", payload['id']))
 
 
+def get_endpoints_for_sp(sp_name):
+    return [
+            VolumeCreateEndpoint(sp_name),
+            VolumeDeleteEndpoint(sp_name),
+            SnapshotCreateEndpoint(sp_name),
+            SnapshotDeleteEndpoint(sp_name),
+            ImageCreateEndpoint(sp_name),
+            ImageDeleteEndpoint(sp_name)
+    ]
+
+
 def get_server_for_sp(sp):
     """Get notification listener for a particular service provider.
 
     The server can be run in the background under eventlet using .start()
     """
     cfg = config.get_conf_for_sp(sp)
-    endpoints = [
-            VolumeCreateEndpoint(cfg.sp_name),
-            VolumeDeleteEndpoint(cfg.sp_name),
-            SnapshotCreateEndpoint(cfg.sp_name),
-            SnapshotDeleteEndpoint(cfg.sp_name),
-            ImageCreateEndpoint(cfg.sp_name),
-            ImageDeleteEndpoint(cfg.sp_name)
-    ]
     transport = oslo_messaging.get_notification_transport(CONF, cfg.messagebus)
     targets = [oslo_messaging.Target(topic='notifications')]
     return oslo_messaging.get_notification_listener(
             transport,
             targets,
-            endpoints,
+            get_endpoints_for_sp(cfg.sp_name),
             executor='eventlet')
 
 
