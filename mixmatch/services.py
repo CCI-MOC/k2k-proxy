@@ -15,8 +15,11 @@
 import json
 import os
 import operator
+from six.moves.urllib import parse
 
 from mixmatch import config
+
+CONF = config.CONF
 
 
 def construct_url(service_provider, service_type,
@@ -43,7 +46,7 @@ def construct_url(service_provider, service_type,
         }
 
 
-def aggregate(responses, key, params=None):
+def aggregate(responses, key, params=None, path=None):
     """Combine responses from several clusters into one response."""
     if params:
         limit = params.get('limit', None)
@@ -94,12 +97,11 @@ def aggregate(responses, key, params=None):
 
     # Inject the pagination URIs
     if start > 0:
-        # TODO - Actual URL
-        response['start'] = 'url'
+        params.pop('marker', None)
+        response['start'] = '%s?%s' % (path, parse.urlencode(params))
     if end < last:
-        # TODO - Actual URL
-        new_marker = response[key][-1]['id']
-        response['next'] = new_marker
+        params['marker'] = response[key][-1]['id']
+        response['next'] = '%s?%s' % (path, parse.urlencode(params))
 
     return json.dumps(response)
 

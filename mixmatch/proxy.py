@@ -42,6 +42,7 @@ def is_valid_uuid(value):
 class RequestHandler:
     def __init__(self, method, path, headers):
         self.method = method
+        self.path = path
         self.headers = headers
 
         self.request_path = path.split('/')
@@ -151,7 +152,10 @@ class RequestHandler:
         # Merge the responses from all service providers into one response.
         if self.aggregate:
             return flask.Response(
-                services.aggregate(responses, self.action[0], request.args),
+                services.aggregate(responses,
+                                   self.action[0],
+                                   request.args,
+                                   self.complete_path),
                 200,
                 content_type=response.headers['content-type']
             )
@@ -210,6 +214,12 @@ class RequestHandler:
     @property
     def chunked(self):
         return self.headers.get('Transfer-Encoding', '').lower() == 'chunked'
+
+    @property
+    def complete_path(self):
+        return '%(host)s:%(port)s/%(path)s' % {'host': CONF.proxy.host,
+                                               'port': CONF.proxy.port,
+                                               'path': self.path}
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',
