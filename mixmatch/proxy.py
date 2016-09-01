@@ -183,7 +183,7 @@ class RequestHandler:
                                     headers=headers,
                                     data=request.data,
                                     stream=self.stream,
-                                    params=request.args)
+                                    params=self._prepare_args(request.args))
 
     @staticmethod
     def _prepare_headers(user_headers):
@@ -194,6 +194,18 @@ class RequestHandler:
             if key.lower().startswith('x-') and key.lower() != 'x-auth-token':
                 headers[key] = value
         return headers
+
+    @staticmethod
+    def _prepare_args(user_args):
+        """Prepare the GET arguments by removing the limit and marker.
+
+        This is because the id of the marker will only be present in one of
+        the service providers.
+        """
+        args = user_args.copy()
+        args.pop('limit', None)
+        args.pop('marker', None)
+        return args
 
     @property
     def chunked(self):
