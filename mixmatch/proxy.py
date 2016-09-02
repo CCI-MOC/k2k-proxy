@@ -151,11 +151,15 @@ class RequestHandler:
         # If the request is for listing images or volumes
         # Merge the responses from all service providers into one response.
         if self.aggregate:
+            # flask.request.base_url returns the complete path the call is
+            # received, including the hostname and port.
+            # See http://flask.pocoo.org/docs/0.11/api/#flask.Request.base_url
+            # for the difference between base_url, url and url_root.
             return flask.Response(
                 services.aggregate(responses,
                                    self.action[0],
                                    request.args,
-                                   self.complete_path),
+                                   request.base_url),
                 200,
                 content_type=response.headers['content-type']
             )
@@ -214,12 +218,6 @@ class RequestHandler:
     @property
     def chunked(self):
         return self.headers.get('Transfer-Encoding', '').lower() == 'chunked'
-
-    @property
-    def complete_path(self):
-        return '%(host)s:%(port)s/%(path)s' % {'host': CONF.proxy.host,
-                                               'port': CONF.proxy.port,
-                                               'path': self.path}
 
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT',

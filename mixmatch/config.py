@@ -28,10 +28,6 @@ proxy_group = cfg.OptGroup(name='proxy',
                            title='Proxy Config Group')
 
 proxy_opts = [
-    cfg.StrOpt('host',
-               default='http://localhost',
-               help='Web Server Host (including protocol)'),
-
     cfg.IntOpt('port',
                default=5001,
                help='Web Server Port'),
