@@ -42,6 +42,7 @@ def is_valid_uuid(value):
 class RequestHandler:
     def __init__(self, method, path, headers):
         self.method = method
+        self.path = path
         self.headers = headers
 
         self.request_path = path.split('/')
@@ -150,8 +151,15 @@ class RequestHandler:
         # If the request is for listing images or volumes
         # Merge the responses from all service providers into one response.
         if self.aggregate:
+            # flask.request.base_url returns the complete path the call is
+            # received, including the hostname and port.
+            # See http://flask.pocoo.org/docs/0.11/api/#flask.Request.base_url
+            # for the difference between base_url, url and url_root.
             return flask.Response(
-                services.aggregate(responses, self.action[0]),
+                services.aggregate(responses,
+                                   self.action[0],
+                                   request.args,
+                                   request.base_url),
                 200,
                 content_type=response.headers['content-type']
             )
@@ -183,7 +191,7 @@ class RequestHandler:
                                     headers=headers,
                                     data=request.data,
                                     stream=self.stream,
-                                    params=request.args)
+                                    params=self._prepare_args(request.args))
 
     @staticmethod
     def _prepare_headers(user_headers):
@@ -194,6 +202,18 @@ class RequestHandler:
             if key.lower().startswith('x-') and key.lower() != 'x-auth-token':
                 headers[key] = value
         return headers
+
+    @staticmethod
+    def _prepare_args(user_args):
+        """Prepare the GET arguments by removing the limit and marker.
+
+        This is because the id of the marker will only be present in one of
+        the service providers.
+        """
+        args = user_args.copy()
+        args.pop('limit', None)
+        args.pop('marker', None)
+        return args
 
     @property
     def chunked(self):
