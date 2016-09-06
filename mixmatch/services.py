@@ -49,7 +49,7 @@ def construct_url(service_provider, service_type,
 def aggregate(responses, key, params=None, path=None):
     """Combine responses from several clusters into one response."""
     if params:
-        limit = params.get('limit', None)
+        limit = int(params.get('limit', 0))
         sort = params.get('sort', None)
         marker = params.get('marker', None)
 
@@ -60,7 +60,7 @@ def aggregate(responses, key, params=None, path=None):
             sort_key, sort_dir = sort.split(':')
     else:
         sort_key = None
-        limit = None
+        limit = 0
         marker = None
 
     resource_list = []
@@ -83,7 +83,7 @@ def aggregate(responses, key, params=None, path=None):
                                key=operator.itemgetter(sort_key),
                                reverse=_is_reverse(sort_dir))
 
-    if limit:
+    if limit != 0:
         if marker:
             # Find the position of the resource with marker id
             # and set the list to start at the one after that.
