@@ -50,7 +50,7 @@ class RequestHandler:
         # workaround to fix glance requests
         # that does not contain image directory
         if self.request_path[0] in ['v1', 'v2']:
-            self.request_path = ['image'] + self.request_path
+            self.request_path.insert(0, 'image')
 
         self.service_type = self.request_path[0]
         self.version = self.request_path[1]
@@ -158,7 +158,7 @@ class RequestHandler:
             return flask.Response(
                 services.aggregate(responses,
                                    self.action[0],
-                                   request.args,
+                                   request.args.to_dict(),
                                    request.base_url),
                 200,
                 content_type=response.headers['content-type']
