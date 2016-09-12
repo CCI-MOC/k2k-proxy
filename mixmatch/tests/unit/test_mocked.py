@@ -46,18 +46,33 @@ class SessionFixture(fixtures.Fixture):
         def get_sp_auth(sp, token, project):
             return FakeSession(self.sp_auths[(sp, token, project)], project)
 
+        def get_projects_at_sp(sp, token):
+            if sp in self.sp_projects:
+                return self.sp_projects[sp]
+            else:
+                return []
+
         self.local_auths = {}
         self.sp_auths = {}
+        self.sp_projects = {}
         self.useFixture(fixtures.MonkeyPatch(
             'mixmatch.auth.get_sp_auth', get_sp_auth))
         self.useFixture(fixtures.MonkeyPatch(
             'mixmatch.auth.get_local_auth', get_local_auth))
+        self.useFixture(fixtures.MonkeyPatch(
+            'mixmatch.auth.get_projects_at_sp', get_projects_at_sp))
 
     def add_local_auth(self, token, project):
         self.local_auths[token] = project
 
     def add_sp_auth(self, sp, token, project, remote_token):
         self.sp_auths[(sp, token, project)] = remote_token
+
+    def add_project_at_sp(self, sp, project):
+        if sp in self.sp_projects:
+            self.sp_projects[sp].append(project)
+        else:
+            self.sp_projects[sp] = [project]
 
 
 class DatabaseFixture(fixtures.Fixture):
@@ -89,7 +104,8 @@ class TestMock(testcase.TestCase):
         # set config values
         self.config_fixture.load_raw_values(
             group='proxy',
-            service_providers='default, remote1')
+            service_providers='default, remote1',
+            aggregation=True)
         self.config_fixture.load_raw_values(
             group='sp_default',
             image_endpoint='http://images.local',

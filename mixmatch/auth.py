@@ -15,9 +15,10 @@
 from keystoneauth1 import identity
 from keystoneauth1 import session
 from keystoneclient import v3
+import json
 
 from mixmatch import config
-from mixmatch.config import LOG, CONF
+from mixmatch.config import LOG, CONF, get_conf_for_sp
 
 
 @config.MEMOIZE_SESSION
@@ -50,6 +51,28 @@ def get_local_auth(user_token):
                                    project_id=project_id)
 
     return session.Session(auth=local_auth)
+
+
+@config.MEMOIZE_SESSION
+def get_unscoped_sp_auth(service_provider, user_token):
+    """Perform K2K auth, and return an unscoped session."""
+    local_auth = get_local_auth(user_token).auth
+    LOG.info("Getting unscoped session for (%s, %s)" % (service_provider,
+                                                        user_token))
+    remote_auth = identity.v3.Keystone2Keystone(
+        local_auth,
+        service_provider
+    )
+    return session.Session(auth=remote_auth)
+
+
+def get_projects_at_sp(service_provider, user_token):
+    """Perform K2K auth, and return the projects that can be scoped to."""
+    conf = get_conf_for_sp(service_provider)
+    unscoped_session = get_unscoped_sp_auth(service_provider, user_token)
+    r = json.loads(str(unscoped_session.get(
+        conf.auth_url + "/OS-FEDERATION/projects").text))
+    return [project[u'id'] for project in r[u'projects']]
 
 
 @config.MEMOIZE_SESSION

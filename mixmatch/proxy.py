@@ -158,9 +158,43 @@ class RequestHandler:
         if not CONF.proxy.search_by_broadcast:
             return self._local_forward()
 
+        for sp in CONF.proxy.service_providers:
+            if sp == 'default':
+                response = self._do_request_on('default', None)
+                if 200 <= response.status_code < 300:
+                    return self._finalize(response)
+            else:
+                self.service_provider = sp
+                for project in auth.get_projects_at_sp(sp, self.local_token):
+                    response = self._do_request_on(sp, project)
+                    if 200 <= response.status_code < 300:
+                        return self._finalize(response)
+        return flask.Response(
+            "Not found\n.",
+            404
+        )
+
     def _aggregate_forward(self):
         if not CONF.proxy.aggregation:
             return self._local_forward()
+
+        responses = {}
+
+        for sp in CONF.proxy.service_providers:
+            if sp == 'default':
+                responses['default'] = self._do_request_on('default', None)
+            else:
+                for proj in auth.get_projects_at_sp(sp, self.local_token):
+                    responses[(sp, proj)] = self._do_request_on(sp, proj)
+
+        return flask.Response(
+            services.aggregate(responses,
+                               self.action[0],
+                               request.args.to_dict(),
+                               request.base_url),
+            200,
+            content_type=responses['default'].headers['content-type']
+        )
 
     def forward(self):
         return self._forward()
