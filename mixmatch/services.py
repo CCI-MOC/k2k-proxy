@@ -72,12 +72,6 @@ def aggregate(responses, key, params=None, path=None):
     start = 0
     last = end = len(resource_list)
 
-    if key == 'images':
-        # By default Glance sorts in descending size order
-        if not sort_key:
-            sort_key = 'size'
-            sort_dir = 'desc'
-
     if sort_key:
         resource_list = sorted(resource_list,
                                key=operator.itemgetter(sort_key),
