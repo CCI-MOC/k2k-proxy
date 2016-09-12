@@ -64,7 +64,7 @@ def aggregate(responses, key, params=None, path=None):
         marker = None
 
     resource_list = []
-    for sp, response in responses.items():
+    for location, response in responses.items():
         resources = json.loads(response.text)
         if type(resources) == dict:
             resource_list += resources[key]

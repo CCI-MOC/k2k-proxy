@@ -53,7 +53,7 @@ def get_local_auth(user_token):
 
 
 @config.MEMOIZE_SESSION
-def get_sp_auth(service_provider, user_token, remote_project_id=None):
+def get_sp_auth(service_provider, user_token, remote_project_id):
     """Perform K2K auth, and return a session for a remote cluster."""
     local_auth = get_local_auth(user_token).auth
 
@@ -61,18 +61,9 @@ def get_sp_auth(service_provider, user_token, remote_project_id=None):
                                                    user_token,
                                                    remote_project_id))
 
-    if remote_project_id is None:
-        project_name = 'admin'
-        project_domain_id = 'default'
-    else:
-        project_name = None
-        project_domain_id = None
-
     remote_auth = identity.v3.Keystone2Keystone(
         local_auth,
         service_provider,
-        project_name=project_name,
-        project_domain_id=project_domain_id,
         project_id=remote_project_id
     )
 
