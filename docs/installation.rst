@@ -12,7 +12,6 @@ Install dependencies. ::
     $ python setup.py install
 
 
-
 Web Server
 ==========
 The recommended way is to run the proxy using uWSGI through the
@@ -58,7 +57,8 @@ installation.  For instance::
     [sp_one]
     sp_name="keystone-sp1"
     messagebus="rabbit://rabbituser:rabbitpassword@192.168.7.20"
-
+    image_endpoint="http://192.168.7.20:9292"
+    volume_endpoint="http://192.168.7.20:8776"
 
 Keystone Configuration
 ----------------------
@@ -70,11 +70,14 @@ In the IdP, delete and then recreate the endpoint which we will proxy. ::
 
     $ openstack endpoint delete <endpoint_id>
     $ openstack endpoint create \
-        --publicurl http://<proxy_host>:<proxy_port>/<api_version> \
-        --internalurl http://<proxy_host>:<proxy_port>/<api_version> \
-        --adminurl http://<proxy_host>:<proxy_port>/<api_version> \
+        --publicurl http://<proxy_host>:<proxy_port>/<service_type>/<api_version> \
+        --internalurl http://<proxy_host>:<proxy_port>/<service_type>/<api_version> \
+        --adminurl http://<proxy_host>:<proxy_port>/<service_type>/<api_version> \
         --region RegionOne \
         <endpoint_type>
+
+Where service_type is ``image`` if endpoint_type is ``image``
+and ``volume`` if endpoint_type is ``volume`` or ``volumev2``
 
 Nova Configuration
 ------------------
@@ -84,8 +87,7 @@ in ``/etc/nova/nova.conf``. So, in the IdP, add the following::
 
     # /etc/nova/nova.conf
     [glance]
-    host=<proxy_host>
-    port=<proxy_port>
+    api_servers=<proxy_url>/image
 
 Cinder Notification
 -------------------
@@ -95,12 +97,13 @@ in ``/etc/cinder/cinder.conf``. So, in the IdP, add the following::
 
     # /etc/cinder/cinder.conf
     [default]
-    glance_api_servers=<proxy_url>
+    glance_api_servers=<proxy_url>/image
 
 Every Cinder must be configured to emit notifications on the messagebus.  So,
 in both the IdP and every SP, add the following to
 ``/etc/cinder/cinder.conf``::
 
+    # /etc/cinder/cinder.conf
     [oslo_messaging_notifications]
     driver = messaging
     topics = notifications
