@@ -68,102 +68,70 @@ class RequestHandler:
         else:
             self.stream = False
 
-        self.resource_id = None
-        self.mapping = None
-        self.aggregate = False
+        resource_id = None
+        mapping = None
+        aggregate = False
 
         if len(self.action) > 1 and is_valid_uuid(self.action[1]):
-            self.resource_id = self.action[1]
-            self.mapping = model.ResourceMapping.find(
+            resource_id = self.action[1]
+            mapping = model.ResourceMapping.find(
                 resource_type=self.action[0],
-                resource_id=self.resource_id.replace("-", ""))
+                resource_id=resource_id.replace("-", ""))
         else:
             if self.method == 'GET' \
                     and self.action[0] in ['images', 'volumes', 'snapshots']:
-                self.aggregate = True
+                aggregate = True
 
-        self.headers = headers
         self.local_token = headers['X-AUTH-TOKEN']
         LOG.info('Local Token: %s ' % self.local_token)
 
-        if 'MM-SERVICE-PROVIDER' in headers:
+        if 'MM-SERVICE-PROVIDER' in headers and 'MM-PROJECT-ID' in headers:
             # The user wants a specific service provider, use that SP.
-            self.service_providers = [headers['MM-SERVICE-PROVIDER']]
+            self.service_provider = headers['MM-SERVICE-PROVIDER']
+            self.project_id = headers['MM-PROJECT-ID']
+            self._forward = self._targeted_forward
+        elif aggregate:
+            self._forward = self._aggregate_forward
+        elif mapping:
+            # Which we already know the location of, use that SP.
+            self.service_provider = mapping.resource_sp
+            self.project_id = mapping.tenant_id
+            self._forward = self._targeted_forward
         else:
-            if self.resource_id:
-                # The user is looking for a specific resource.
-                if self.mapping:
-                    # Which we already know the location of, use that SP.
-                    self.service_providers = [self.mapping.resource_sp]
-                else:
-                    # We don't know about the location of this resource.
-                    if CONF.proxy.search_by_broadcast:
-                        # But searching is enabled, ask all enabled SPs.
-                        self.service_providers = CONF.proxy.service_providers
-                    else:
-                        # Searching is not enabled, just ask local.
-                        self.service_providers = \
-                                CONF.proxy.service_providers[:1]
-            else:
-                # We're not looking for a specific Resource.
-                if CONF.proxy.aggregation and self.aggregate:
-                    # If aggregation is enabled, ask all.
-                    self.service_providers = CONF.proxy.service_providers
-                else:
-                    # Just ask local.
-                    self.service_providers = CONF.proxy.service_providers[:1]
+            self._forward = self._search_forward
 
-    def forward(self):
-        responses = dict()
+    def _do_request_on(self, sp, project_id):
+        if sp == 'default':
+            auth_session = auth.get_local_auth(self.local_token)
+        else:
+            auth_session = auth.get_sp_auth(sp,
+                                            self.local_token,
+                                            project_id)
         headers = self._prepare_headers(self.headers)
-        for sp in self.service_providers:
-            if sp == 'default':
-                auth_session = auth.get_local_auth(self.local_token)
-            else:
-                remote_project_id = None
-                if self.mapping:
-                    remote_project_id = self.mapping.tenant_id
-                auth_session = auth.get_sp_auth(sp,
-                                                self.local_token,
-                                                remote_project_id)
+        headers['X-AUTH-TOKEN'] = auth_session.get_token()
 
-            headers['X-AUTH-TOKEN'] = auth_session.get_token()
+        url = services.construct_url(
+            sp,
+            self.service_type,
+            self.version,
+            self.action,
+            project_id=project_id
+        )
 
-            remote_url = services.construct_url(
-                sp,
-                self.service_type,
-                self.version,
-                self.action,
-                project_id=auth_session.get_project_id()
-            )
+        if self.chunked:
+            return requests.request(method=self.method,
+                                    url=url,
+                                    headers=headers,
+                                    data=chunked_reader())
+        else:
+            return requests.request(method=self.method,
+                                    url=url,
+                                    headers=headers,
+                                    data=request.data,
+                                    stream=self.stream,
+                                    params=self._prepare_args(request.args))
 
-            # Send the request to the SP
-            response = self._request(remote_url, headers)
-            responses[sp] = response
-
-            LOG.info("Remote URL: %s, Status: %s" %
-                     (remote_url, response.status_code))
-
-            # If we're looking for a specific resource and we found it
-            if 200 <= response.status_code < 300 and self.resource_id:
-                break
-
-        # If the request is for listing images or volumes
-        # Merge the responses from all service providers into one response.
-        if self.aggregate:
-            # flask.request.base_url returns the complete path the call is
-            # received, including the hostname and port.
-            # See http://flask.pocoo.org/docs/0.11/api/#flask.Request.base_url
-            # for the difference between base_url, url and url_root.
-            return flask.Response(
-                services.aggregate(responses,
-                                   self.action[0],
-                                   request.args.to_dict(),
-                                   request.base_url),
-                200,
-                content_type=response.headers['content-type']
-            )
-
+    def _finalize(self, response):
         if not self.stream:
             final_response = flask.Response(
                 response.text,
@@ -179,19 +147,57 @@ class RequestHandler:
             )
         return final_response
 
-    def _request(self, url, headers):
-        if self.chunked:
-            return requests.request(method=self.method,
-                                    url=url,
-                                    headers=headers,
-                                    data=chunked_reader())
-        else:
-            return requests.request(method=self.method,
-                                    url=url,
-                                    headers=headers,
-                                    data=request.data,
-                                    stream=self.stream,
-                                    params=self._prepare_args(request.args))
+    def _local_forward(self):
+        return self._finalize(self._do_request_on('default', None))
+
+    def _targeted_forward(self):
+        return self._finalize(
+            self._do_request_on(self.service_provider, self.project_id))
+
+    def _search_forward(self):
+        if not CONF.proxy.search_by_broadcast:
+            return self._local_forward()
+
+        for sp in CONF.proxy.service_providers:
+            if sp == 'default':
+                response = self._do_request_on('default', None)
+                if 200 <= response.status_code < 300:
+                    return self._finalize(response)
+            else:
+                self.service_provider = sp
+                for project in auth.get_projects_at_sp(sp, self.local_token):
+                    response = self._do_request_on(sp, project)
+                    if 200 <= response.status_code < 300:
+                        return self._finalize(response)
+        return flask.Response(
+            "Not found\n.",
+            404
+        )
+
+    def _aggregate_forward(self):
+        if not CONF.proxy.aggregation:
+            return self._local_forward()
+
+        responses = {}
+
+        for sp in CONF.proxy.service_providers:
+            if sp == 'default':
+                responses['default'] = self._do_request_on('default', None)
+            else:
+                for proj in auth.get_projects_at_sp(sp, self.local_token):
+                    responses[(sp, proj)] = self._do_request_on(sp, proj)
+
+        return flask.Response(
+            services.aggregate(responses,
+                               self.action[0],
+                               request.args.to_dict(),
+                               request.base_url),
+            200,
+            content_type=responses['default'].headers['content-type']
+        )
+
+    def forward(self):
+        return self._forward()
 
     @staticmethod
     def _prepare_headers(user_headers):

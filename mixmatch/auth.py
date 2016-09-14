@@ -15,9 +15,10 @@
 from keystoneauth1 import identity
 from keystoneauth1 import session
 from keystoneclient import v3
+import json
 
 from mixmatch import config
-from mixmatch.config import LOG, CONF
+from mixmatch.config import LOG, CONF, get_conf_for_sp
 
 
 @config.MEMOIZE_SESSION
@@ -53,7 +54,29 @@ def get_local_auth(user_token):
 
 
 @config.MEMOIZE_SESSION
-def get_sp_auth(service_provider, user_token, remote_project_id=None):
+def get_unscoped_sp_auth(service_provider, user_token):
+    """Perform K2K auth, and return an unscoped session."""
+    local_auth = get_local_auth(user_token).auth
+    LOG.info("Getting unscoped session for (%s, %s)" % (service_provider,
+                                                        user_token))
+    remote_auth = identity.v3.Keystone2Keystone(
+        local_auth,
+        service_provider
+    )
+    return session.Session(auth=remote_auth)
+
+
+def get_projects_at_sp(service_provider, user_token):
+    """Perform K2K auth, and return the projects that can be scoped to."""
+    conf = get_conf_for_sp(service_provider)
+    unscoped_session = get_unscoped_sp_auth(service_provider, user_token)
+    r = json.loads(str(unscoped_session.get(
+        conf.auth_url + "/OS-FEDERATION/projects").text))
+    return [project[u'id'] for project in r[u'projects']]
+
+
+@config.MEMOIZE_SESSION
+def get_sp_auth(service_provider, user_token, remote_project_id):
     """Perform K2K auth, and return a session for a remote cluster."""
     local_auth = get_local_auth(user_token).auth
 
@@ -61,18 +84,9 @@ def get_sp_auth(service_provider, user_token, remote_project_id=None):
                                                    user_token,
                                                    remote_project_id))
 
-    if remote_project_id is None:
-        project_name = 'admin'
-        project_domain_id = 'default'
-    else:
-        project_name = None
-        project_domain_id = None
-
     remote_auth = identity.v3.Keystone2Keystone(
         local_auth,
         service_provider,
-        project_name=project_name,
-        project_domain_id=project_domain_id,
         project_id=remote_project_id
     )
 
