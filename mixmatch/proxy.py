@@ -54,12 +54,20 @@ class RequestHandler:
 
         self.service_type = self.request_path[0]
         self.version = self.request_path[1]
+        self.detailed = True
         if self.service_type == 'image':
             # /image/{version}/{action}
             self.action = self.request_path[2:]
         elif self.service_type == 'volume':
             # /volume/{version}/{project_id}/{action}
             self.action = self.request_path[3:]
+
+            # if request is to /volumes, change it
+            # to /volumes/detail for aggregation
+            if self.method == 'GET' \
+                    and self.action[-1] == 'volumes':
+                self.detailed = False
+                self.action.insert(len(self.action), 'detail')
         else:
             raise ValueError
 
@@ -191,7 +199,8 @@ class RequestHandler:
             services.aggregate(responses,
                                self.action[0],
                                request.args.to_dict(),
-                               request.base_url),
+                               request.base_url,
+                               detailed=self.detailed),
             200,
             content_type=responses['default'].headers['content-type']
         )

@@ -46,7 +46,7 @@ def construct_url(service_provider, service_type,
         }
 
 
-def aggregate(responses, key, params=None, path=None):
+def aggregate(responses, key, params=None, path=None, detailed=True):
     """Combine responses from several clusters into one response."""
     if params:
         limit = int(params.get('limit', 0))
@@ -87,6 +87,14 @@ def aggregate(responses, key, params=None, path=None):
                     break
         end = start + limit
 
+    # this hack is to handle GET requests to /volumes
+    # we automatically make the call to /volumes/detail
+    # because we need sorting information. Here we
+    # remove the extra values /volumes/detail provides
+    if key == 'volumes' and not detailed:
+        resource_list[start:end] = \
+                _remove_details(resource_list[start:end])
+
     response = {key: resource_list[start:end]}
 
     # Inject the pagination URIs
@@ -108,3 +116,11 @@ def _is_reverse(order):
         return True
     else:
         raise ValueError
+
+
+def _remove_details(volumes):
+    """Delete key, value pairs if key is not in keys"""
+    keys = ['id', 'links', 'name']
+    for i in range(len(volumes)):
+        volumes[i] = {key: volumes[i][key] for key in keys}
+    return volumes
