@@ -100,7 +100,7 @@ class RequestHandler:
         else:
             self._forward = self._search_forward
 
-    def _do_request_on(self, sp, project_id):
+    def _do_request_on(self, sp, project_id=None):
         if sp == 'default':
             auth_session = auth.get_local_auth(self.local_token)
         else:
@@ -115,7 +115,7 @@ class RequestHandler:
             self.service_type,
             self.version,
             self.action,
-            project_id=project_id
+            project_id=auth_session.get_project_id()
         )
 
         if self.chunked:
@@ -148,7 +148,7 @@ class RequestHandler:
         return final_response
 
     def _local_forward(self):
-        return self._finalize(self._do_request_on('default', None))
+        return self._finalize(self._do_request_on('default'))
 
     def _targeted_forward(self):
         return self._finalize(
@@ -160,7 +160,7 @@ class RequestHandler:
 
         for sp in CONF.proxy.service_providers:
             if sp == 'default':
-                response = self._do_request_on('default', None)
+                response = self._do_request_on('default')
                 if 200 <= response.status_code < 300:
                     return self._finalize(response)
             else:
@@ -182,7 +182,7 @@ class RequestHandler:
 
         for sp in CONF.proxy.service_providers:
             if sp == 'default':
-                responses['default'] = self._do_request_on('default', None)
+                responses['default'] = self._do_request_on('default')
             else:
                 for proj in auth.get_projects_at_sp(sp, self.local_token):
                     responses[(sp, proj)] = self._do_request_on(sp, proj)
