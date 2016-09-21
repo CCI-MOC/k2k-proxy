@@ -32,12 +32,12 @@ class VolumeCreateEndpoint(object):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating volume mapping %s -> %s at %s' % (
-                 payload['volume_id'].replace("-", ""),
-                 payload['tenant_id'].replace("-", ""),
+                 payload['volume_id'],
+                 payload['tenant_id'],
                  self.sp_name))
         insert(ResourceMapping("volumes",
-               payload['volume_id'].replace("-", ""),
-               payload['tenant_id'].replace("-", ""),
+               payload['volume_id'],
+               payload['tenant_id'],
                self.sp_name))
 
 
@@ -50,8 +50,8 @@ class VolumeDeleteEndpoint(object):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Deleting volume mapping %s -> %s at %s' % (
-                 payload['volume_id'].replace("-", ""),
-                 payload['tenant_id'].replace("-", ""),
+                 payload['volume_id'],
+                 payload['tenant_id'],
                  self.sp_name))
         delete(ResourceMapping.find("volumes", payload['volume_id']))
 
@@ -65,12 +65,12 @@ class SnapshotCreateEndpoint(object):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating snapshot mapping %s -> %s at %s' % (
-                 payload['snapshot_id'].replace("-", ""),
-                 payload['tenant_id'].replace("-", ""),
+                 payload['snapshot_id'],
+                 payload['tenant_id'],
                  self.sp_name))
         insert(ResourceMapping("snapshots",
-               payload['snapshot_id'].replace("-", ""),
-               payload['tenant_id'].replace("-", ""),
+               payload['snapshot_id'],
+               payload['tenant_id'],
                self.sp_name))
 
 
@@ -83,8 +83,8 @@ class SnapshotDeleteEndpoint(object):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Deleting snapshot mapping %s -> %s at %s' % (
-                 payload['snapshot_id'].replace("-", ""),
-                 payload['tenant_id'].replace("-", ""),
+                 payload['snapshot_id'],
+                 payload['tenant_id'],
                  self.sp_name))
         delete(ResourceMapping.find("snapshots", payload['snapshot_id']))
 
@@ -98,12 +98,12 @@ class ImageCreateEndpoint(object):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating image mapping %s -> %s at %s' % (
-                 payload['id'].replace("-", ""),
-                 payload['owner'].replace("-", ""),
+                 payload['id'],
+                 payload['owner'],
                  self.sp_name))
         insert(ResourceMapping("images",
-               payload['id'].replace("-", ""),
-               payload['owner'].replace("-", ""),
+               payload['id'],
+               payload['owner'],
                self.sp_name))
 
 
@@ -116,8 +116,8 @@ class ImageDeleteEndpoint(object):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Deleting image mapping %s -> %s at %s' % (
-                 payload['id'].replace("-", ""),
-                 payload['owner'].replace("-", ""),
+                 payload['id'],
+                 payload['owner'],
                  self.sp_name))
         delete(ResourceMapping.find("images", payload['id']))
 

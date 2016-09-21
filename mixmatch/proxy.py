@@ -84,7 +84,7 @@ class RequestHandler:
             resource_id = self.action[1]
             mapping = model.ResourceMapping.find(
                 resource_type=self.action[0],
-                resource_id=resource_id.replace("-", ""))
+                resource_id=resource_id)
         else:
             if self.method == 'GET' \
                     and self.action[0] in ['images', 'volumes', 'snapshots']:
