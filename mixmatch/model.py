@@ -34,8 +34,8 @@ class ResourceMapping(BASE):
 
     def __init__(self, resource_type, resource_id, tenant_id, resource_sp):
         self.resource_type = resource_type
-        self.resource_id = resource_id
-        self.tenant_id = tenant_id
+        self.resource_id = resource_id.replace("-", "")
+        self.tenant_id = tenant_id.replace("-", "")
         self.resource_sp = resource_sp
 
     def __repr__(self):
@@ -56,7 +56,7 @@ class ResourceMapping(BASE):
         with enginefacade.reader.using(context) as session:
             mapping = session.query(ResourceMapping).filter_by(
                 resource_type=resource_type,
-                resource_id=resource_id
+                resource_id=resource_id.replace("-", "")
             ).first()
         return mapping
 
