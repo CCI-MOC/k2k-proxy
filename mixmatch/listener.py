@@ -56,6 +56,24 @@ class VolumeDeleteEndpoint(object):
         delete(ResourceMapping.find("volumes", payload['volume_id']))
 
 
+class VolumeTransferEndpoint(object):
+    def __init__(self, sp_name):
+        self.sp_name = sp_name
+    filter_rule = oslo_messaging.NotificationFilter(
+            publisher_id='^volume.*',
+            event_type='^volume.transfer.accept.end$')
+
+    def info(self, ctxt, publisher_id, event_type, payload, metadata):
+        LOG.info('Moving volume mapping %s -> %s at %s' % (
+                 payload['volume_id'],
+                 payload['tenant_id'],
+                 self.sp_name))
+        mapping = ResourceMapping.find("volumes", payload['volume_id'])
+        # Since we're manually updating a field, we have to sanitize the UUID
+        # ourselves.
+        mapping.tenant_id = payload['tenant_id'].replace("-", "")
+
+
 class SnapshotCreateEndpoint(object):
     def __init__(self, sp_name):
         self.sp_name = sp_name
@@ -126,6 +144,7 @@ def get_endpoints_for_sp(sp_name):
     return [
             VolumeCreateEndpoint(sp_name),
             VolumeDeleteEndpoint(sp_name),
+            VolumeTransferEndpoint(sp_name),
             SnapshotCreateEndpoint(sp_name),
             SnapshotDeleteEndpoint(sp_name),
             ImageCreateEndpoint(sp_name),
