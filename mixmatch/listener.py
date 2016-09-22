@@ -24,11 +24,12 @@ eventlet.monkey_patch()
 
 
 class VolumeCreateEndpoint(object):
+    filter_rule = oslo_messaging.NotificationFilter(
+        publisher_id='^volume.*',
+        event_type='^volume.create.start$')
+
     def __init__(self, sp_name):
         self.sp_name = sp_name
-    filter_rule = oslo_messaging.NotificationFilter(
-            publisher_id='^volume.*',
-            event_type='^volume.create.start$')
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating volume mapping %s -> %s at %s' % (
@@ -57,11 +58,12 @@ class VolumeDeleteEndpoint(object):
 
 
 class VolumeTransferEndpoint(object):
+    filter_rule = oslo_messaging.NotificationFilter(
+        publisher_id='^volume.*',
+        event_type='^volume.transfer.accept.end$')
+
     def __init__(self, sp_name):
         self.sp_name = sp_name
-    filter_rule = oslo_messaging.NotificationFilter(
-            publisher_id='^volume.*',
-            event_type='^volume.transfer.accept.end$')
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Moving volume mapping %s -> %s at %s' % (
@@ -75,11 +77,12 @@ class VolumeTransferEndpoint(object):
 
 
 class SnapshotCreateEndpoint(object):
-    def __init__(self, sp_name):
-        self.sp_name = sp_name
     filter_rule = oslo_messaging.NotificationFilter(
             publisher_id='^snapshot.*',
             event_type='^snapshot.create.start$')
+
+    def __init__(self, sp_name):
+        self.sp_name = sp_name
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating snapshot mapping %s -> %s at %s' % (
@@ -93,11 +96,12 @@ class SnapshotCreateEndpoint(object):
 
 
 class SnapshotDeleteEndpoint(object):
+    filter_rule = oslo_messaging.NotificationFilter(
+        publisher_id='^snapshot.*',
+        event_type='^snapshot.delete.end$')
+
     def __init__(self, sp_name):
         self.sp_name = sp_name
-    filter_rule = oslo_messaging.NotificationFilter(
-            publisher_id='^snapshot.*',
-            event_type='^snapshot.delete.end$')
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Deleting snapshot mapping %s -> %s at %s' % (
@@ -108,11 +112,12 @@ class SnapshotDeleteEndpoint(object):
 
 
 class ImageCreateEndpoint(object):
+    filter_rule = oslo_messaging.NotificationFilter(
+        publisher_id='^image.*',
+        event_type='^image.create$')
+
     def __init__(self, sp_name):
         self.sp_name = sp_name
-    filter_rule = oslo_messaging.NotificationFilter(
-            publisher_id='^image.*',
-            event_type='^image.create$')
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Creating image mapping %s -> %s at %s' % (
@@ -126,11 +131,12 @@ class ImageCreateEndpoint(object):
 
 
 class ImageDeleteEndpoint(object):
+    filter_rule = oslo_messaging.NotificationFilter(
+        publisher_id='^image.*',
+        event_type='^image.delete$')
+
     def __init__(self, sp_name):
         self.sp_name = sp_name
-    filter_rule = oslo_messaging.NotificationFilter(
-            publisher_id='^image.*',
-            event_type='^image.delete$')
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         LOG.info('Deleting image mapping %s -> %s at %s' % (
