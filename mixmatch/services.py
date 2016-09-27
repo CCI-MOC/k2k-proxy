@@ -35,7 +35,7 @@ def construct_url(service_provider, service_type,
             'version': version,
             'action': os.path.join(*action)
         }
-    elif service_type in ['volume', 'volumev2']:
+    elif service_type == 'volume':
         endpoint = conf.volume_endpoint
 
         return "%(endpoint)s/%(version)s/%(project)s/%(action)s" % {
