@@ -59,6 +59,9 @@ LATEST_IMAGE = '61f655c0-4511-4307-a257-4162c87a5130'
 
 IMAGE_PATH = 'http://localhost/image/images'
 
+IMAGES_IN_SAMPLE = 5
+VOLUMES_IN_SAMPLE = 2
+
 
 class TestServices(testcase.TestCase):
     def setUp(self):
@@ -67,11 +70,11 @@ class TestServices(testcase.TestCase):
     def test_aggregate_key(self):
         # Aggregate 'images'
         response = json.loads(services.aggregate(IMAGES, 'images'))
-        self.assertEqual(5, len(response['images']))
+        self.assertEqual(IMAGES_IN_SAMPLE, len(response['images']))
 
         # Aggregate 'volumes'
         response = json.loads(services.aggregate(VOLUMES, 'volumes'))
-        self.assertEqual(2, len(response['volumes']))
+        self.assertEqual(VOLUMES_IN_SAMPLE, len(response['volumes']))
 
     def test_aggregate_limit(self):
         params = {
@@ -180,6 +183,51 @@ class TestServices(testcase.TestCase):
                 self._prepare_params(params, marker=SECOND_EARLIEST_IMAGE)
             ))
         )
+
+        # Start link
+        self.assertEqual(
+            Url(response['start']),
+            Url(self._prepare_url(
+                IMAGE_PATH,
+                self._prepare_params(params)
+            ))
+        )
+
+    def test_marker_without_limit(self):
+        """Test marker without limit."""
+        params = {
+            'sort': 'updated_at:asc',
+            'marker': EARLIEST_IMAGE
+        }
+
+        response = json.loads(services.aggregate(IMAGES, 'images',
+                                                 params, IMAGE_PATH))
+
+        # Ensure we skipped the first one
+        self.assertEqual(response['images'][0]['id'], SECOND_EARLIEST_IMAGE)
+        self.assertEqual(IMAGES_IN_SAMPLE - 1, len(response['images']))
+
+        # Start link
+        self.assertEqual(
+            Url(response['start']),
+            Url(self._prepare_url(
+                IMAGE_PATH,
+                self._prepare_params(params)
+            ))
+        )
+
+    def test_marker_last(self):
+        """Test marker without limit, nothing to return."""
+        params = {
+            'sort': 'updated_at:asc',
+            'marker': LATEST_IMAGE
+        }
+
+        response = json.loads(services.aggregate(IMAGES, 'images',
+                                                 params, IMAGE_PATH))
+
+        # Ensure we skipped the first one
+        self.assertEqual(0, len(response['images']))
 
         # Start link
         self.assertEqual(
