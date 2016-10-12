@@ -77,14 +77,15 @@ def aggregate(responses, key, params=None, path=None, detailed=True):
                                key=operator.itemgetter(sort_key),
                                reverse=_is_reverse(sort_dir))
 
+    if marker:
+        # Find the position of the resource with marker id
+        # and set the list to start at the one after that.
+        for index, item in enumerate(resource_list):
+            if item['id'] == marker:
+                start = index + 1
+                break
+
     if limit != 0:
-        if marker:
-            # Find the position of the resource with marker id
-            # and set the list to start at the one after that.
-            for index, item in enumerate(resource_list):
-                if item['id'] == marker:
-                    start = index + 1
-                    break
         end = start + limit
 
     # this hack is to handle GET requests to /volumes
