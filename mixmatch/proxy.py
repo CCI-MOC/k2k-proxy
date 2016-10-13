@@ -13,6 +13,7 @@
 #   under the License.
 
 import uuid
+import json
 
 import requests
 import flask
@@ -53,7 +54,17 @@ class RequestHandler:
             self.request_path.insert(0, 'image')
 
         self.service_type = self.request_path[0]
+
+        if len(self.request_path) == 1:
+            # unversioned calls with no action
+            self._forward = self._list_api_versions
+            return
+        elif len(self.request_path) == 2:
+            # TODO verioned calls with no action
+            raise ValueError
+
         self.version = self.request_path[1]
+
         self.detailed = True
         if self.service_type == 'image':
             # /image/{version}/{action}
@@ -125,6 +136,8 @@ class RequestHandler:
             self.action,
             project_id=auth_session.get_project_id()
         )
+
+        LOG.info('%s: %s' % (self.method, url))
 
         if self.chunked:
             return requests.request(method=self.method,
@@ -204,6 +217,76 @@ class RequestHandler:
             200,
             content_type=responses['default'].headers['content-type']
         )
+
+    def _list_api_versions(self):
+        api_versions = list()
+
+        if self.service_type == 'image':
+            supported_versions = CONF.proxy.image_api_versions
+
+            for version in supported_versions:
+                info = dict()
+                if version == supported_versions[0]:
+                    info.update({'status': 'CURRENT'})
+                else:
+                    info.update({'status': 'SUPPORTED'})
+
+                info.update({
+                   'id':  version,
+                   'links': [
+                       {'href': '%s/%s/' % (request.base_url,
+                                            version[:-2]),
+                        'rel': 'self'}
+                   ]
+                })
+                api_versions.append(info)
+            return json.dumps({'versions': api_versions})
+
+        elif self.service_type == 'volume':
+            supported_versions = CONF.proxy.volume_api_versions
+
+            for version in supported_versions:
+                info = dict()
+                if version == supported_versions[0]:
+                    info.update({
+                        'status': 'CURRENT',
+                        'min_version': version[1:],
+                        'version': version[1:]
+                    })
+                else:
+                    info.update({
+                        'status': 'SUPPORTED',
+                        'min_version': '',
+                        'version': ''
+                    })
+
+                info.update({
+                    'id': version,
+                    'updated': '2014-06-28T12:20:21Z',  # FIXME
+                    'links': [
+                        {'href': 'http://docs.openstack.org/',
+                         'type': 'text/html',
+                         'rel': 'describedby'},
+                        {'href': '%s/%s/' % (request.base_url,
+                                             version[:-2]),
+                         'rel': 'self'}
+                    ],
+                    'media-types': [
+                        {'base': 'application/json',
+                         'type':
+                             'application/vnd.openstack.volume+json;version=%s'
+                                 % version[1:-2]},
+                        {'base': 'application/xml',
+                         'type':
+                             'application/vnd.openstack.volume+xml;version=%s'
+                                 % version[1:-2]}
+                    ]
+                })
+                api_versions.append(info)
+            return json.dumps({'versions': api_versions})
+
+        else:
+            raise ValueError
 
     def forward(self):
         return self._forward()

@@ -50,7 +50,15 @@ proxy_opts = [
 
     cfg.IntOpt('cache_time',
                default=600,
-               help='How long to store cached tokens for')
+               help='How long to store cached tokens for'),
+
+    cfg.ListOpt('image_api_versions',
+                default=['v2.3', 'v2.2', 'v2.1', 'v2.0', 'v1.1', 'v1.0'],
+                help='List of supported image api versions'),
+
+    cfg.ListOpt('volume_api_versions',
+                default=['v3.0', 'v2.0', 'v1.0'],
+                help='List of supported volume api versions'),
 ]
 
 # Keystone
