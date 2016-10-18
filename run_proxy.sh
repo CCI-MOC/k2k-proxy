@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-uwsgi --socket 127.0.0.1:5001 \
+uwsgi --socket 0.0.0.0:5001 \
     --protocol=http \
     --http-chunked-input \
     -w mixmatch.wsgi \
