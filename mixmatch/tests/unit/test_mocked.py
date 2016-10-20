@@ -315,3 +315,19 @@ class TestMock(testcase.TestCase):
         actual = json.loads(response.data.decode("ascii"))
         actual['images'].sort(key=(lambda x: x[u'id']))
         self.assertEqual(actual, EXPECTED)
+
+    def test_unversioned_calls_no_action(self):
+        response = self.app.get(
+            '/image',
+            headers={'X-AUTH-TOKEN': 'local-tok',
+                     'CONTENT-TYPE': 'application/json'})
+        self.assertEqual(response.status_code, 200)
+        actual = json.loads(response.data.decode("ascii"))
+        self.assertEqual(len(actual['versions']), 6)
+
+    def test_versioned_calls_no_action(self):
+        response = self.app.get(
+            '/image/v2',
+            headers={'X-AUTH-TOKEN': 'local-tok',
+                     'CONTENT-TYPE': 'application/json'})
+        self.assertEqual(response.status_code, 400)

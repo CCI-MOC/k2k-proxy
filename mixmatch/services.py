@@ -109,6 +109,77 @@ def aggregate(responses, key, params=None, path=None, detailed=True):
     return json.dumps(response)
 
 
+def list_api_versions(service_type, url):
+    api_versions = list()
+
+    if service_type == 'image':
+        supported_versions = CONF.proxy.image_api_versions
+
+        for version in supported_versions:
+            info = dict()
+            if version == supported_versions[0]:
+                info.update({'status': 'CURRENT'})
+            else:
+                info.update({'status': 'SUPPORTED'})
+
+            info.update({
+               'id':  version,
+               'links': [
+                   {'href': '%s/%s/' % (url,
+                                        version[:-2]),
+                    'rel': 'self'}
+               ]
+            })
+            api_versions.append(info)
+        return json.dumps({'versions': api_versions})
+
+    elif service_type == 'volume':
+        supported_versions = CONF.proxy.volume_api_versions
+
+        for version in supported_versions:
+            info = dict()
+            if version == supported_versions[0]:
+                info.update({
+                    'status': 'CURRENT',
+                    'min_version': version[1:],
+                    'version': version[1:]
+                    })
+            else:
+                info.update({
+                    'status': 'SUPPORTED',
+                    'min_version': '',
+                    'version': ''
+                })
+
+            info.update({
+                'id': version,
+                'updated': '2014-06-28T12:20:21Z',  # FIXME
+                'links': [
+                    {'href': 'http://docs.openstack.org/',
+                     'type': 'text/html',
+                     'rel': 'describedby'},
+                    {'href': '%s/%s/' % (url,
+                                         version[:-2]),
+                     'rel': 'self'}
+                ],
+                'media-types': [
+                    {'base': 'application/json',
+                     'type':
+                         'application/vnd.openstack.volume+json;version=%s'
+                             % version[1:-2]},
+                    {'base': 'application/xml',
+                     'type':
+                         'application/vnd.openstack.volume+xml;version=%s'
+                             % version[1:-2]}
+                ]
+            })
+            api_versions.append(info)
+        return json.dumps({'versions': api_versions})
+
+    else:
+        raise ValueError
+
+
 def _is_reverse(order):
     """Return True if order is asc, False if order is desc"""
     if order == 'asc':
