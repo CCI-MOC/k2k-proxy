@@ -14,6 +14,8 @@
 
 import json
 from six.moves.urllib import parse
+from oslo_config import fixture as config_fixture
+from mixmatch.config import CONF
 
 from testtools import testcase
 
@@ -62,10 +64,16 @@ IMAGE_PATH = 'http://localhost/image/images'
 IMAGES_IN_SAMPLE = 5
 VOLUMES_IN_SAMPLE = 2
 
+API_VERSIONS = 'v3.2, v2.0, v1'
+NUM_OF_VERSIONS = 3
+IMAGE_UNVERSIONED = 'http://localhost/image'
+IMAGE_VERSIONED = 'http://localhost/image/v3/'
+
 
 class TestServices(testcase.TestCase):
     def setUp(self):
         super(TestServices, self).setUp()
+        self.config_fixture = self.useFixture(config_fixture.Config(conf=CONF))
 
     def test_aggregate_key(self):
         # Aggregate 'images'
@@ -237,6 +245,26 @@ class TestServices(testcase.TestCase):
                 self._prepare_params(params)
             ))
         )
+
+    def test_list_api_versions(self):
+
+        self.config_fixture.load_raw_values(group='proxy',
+                                            image_api_versions=API_VERSIONS,
+                                            volume_api_versions=API_VERSIONS)
+
+        # List image api
+        response = json.loads(services.list_api_versions('image',
+                                                         IMAGE_UNVERSIONED))
+        current_version = response['versions'][0]['id']
+        current_version_status = response['versions'][0]['status']
+        current_version_url = response['versions'][0]['links'][0]['href']
+
+        self.assertEqual(NUM_OF_VERSIONS, len(response['versions']))
+        self.assertEqual(current_version, 'v3.2')
+        self.assertEqual(current_version_status, 'CURRENT')
+        self.assertEqual(
+            Url(current_version_url),
+            Url(IMAGE_VERSIONED))
 
     @staticmethod
     def _prepare_params(user_params, marker=None):
